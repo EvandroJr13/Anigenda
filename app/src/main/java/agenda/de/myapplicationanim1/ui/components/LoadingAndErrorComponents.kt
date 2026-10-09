@@ -49,20 +49,33 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import agenda.de.myapplicationanim1.data.util.AnimeAlarmScheduler
 import agenda.de.myapplicationanim1.data.util.NotificationPreferences
+import agenda.de.myapplicationanim1.ui.util.rememberNotificationPermissionState
 
 @Composable
 fun GlobalNotificationAction(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val permissionState = rememberNotificationPermissionState()
     val prefs = remember { NotificationPreferences(context) }
     var isGlobalEnabled by remember { mutableStateOf(prefs.isGlobalNotificationsEnabled) }
 
     IconButton(
         onClick = {
-            isGlobalEnabled = !isGlobalEnabled
-            prefs.isGlobalNotificationsEnabled = isGlobalEnabled
+            val nextState = !isGlobalEnabled
+            if (nextState) {
+                permissionState.requestPermissions {
+                    isGlobalEnabled = true
+                    prefs.isGlobalNotificationsEnabled = true
+                    AnimeAlarmScheduler.rescheduleAllAlarms(context)
+                }
+            } else {
+                isGlobalEnabled = false
+                prefs.isGlobalNotificationsEnabled = false
+                AnimeAlarmScheduler.rescheduleAllAlarms(context)
+            }
         },
         modifier = modifier
     ) {

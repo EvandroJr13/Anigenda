@@ -32,9 +32,17 @@ import agenda.de.myapplicationanim1.ui.theme.AgendaDeAnimesTheme
 @Composable
 fun MainApp(
     modifier: Modifier = Modifier,
-    settingsViewModel: SettingsViewModel = viewModel()
+    settingsViewModel: SettingsViewModel = viewModel(),
+    initialAnimeId: Int? = null
 ) {
-    val backStack = remember { mutableStateListOf<AppScreen>(AppScreen.Schedule) }
+    val initialStack = remember(initialAnimeId) {
+        if (initialAnimeId != null && initialAnimeId > 0) {
+            listOf(AppScreen.Schedule, AppScreen.Details(initialAnimeId))
+        } else {
+            listOf(AppScreen.Schedule)
+        }
+    }
+    val backStack = remember { mutableStateListOf<AppScreen>().apply { addAll(initialStack) } }
     val currentScreen = backStack.lastOrNull() ?: AppScreen.Schedule
 
     val currentTab = when (currentScreen) {

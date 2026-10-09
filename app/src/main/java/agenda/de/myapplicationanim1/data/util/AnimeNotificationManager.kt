@@ -32,7 +32,7 @@ object AnimeNotificationManager {
         createNotificationChannel(context)
         val prefs = NotificationPreferences(context)
         if (!prefs.isGlobalNotificationsEnabled) return
-        if (!prefs.isAnimeNotificationsEnabled(animeId)) return
+        if (animeId != -1 && !prefs.isAnimeNotificationsEnabled(animeId)) return
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -41,7 +41,8 @@ object AnimeNotificationManager {
         }
 
         val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra("anime_id", animeId)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         val pendingIntent = PendingIntent.getActivity(
             context,
@@ -50,14 +51,14 @@ object AnimeNotificationManager {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val title = "Novo episódio de $animeTitle!"
+        val text = "O episódio do anime acabou de ser lançado!"
+
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
-            .setContentTitle("Novo Episódio Disponível! 📺")
-            .setContentText("O episódio $episodeNumber de '$animeTitle' está no ar ou agendado.")
-            .setStyle(
-                NotificationCompat.BigTextStyle()
-                    .bigText("O episódio $episodeNumber de '$animeTitle' foi lançado ou está agendado para transmissão hoje. Não perca!")
-            )
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)

@@ -115,6 +115,7 @@ class SettingsViewModel @JvmOverloads constructor(
     fun toggleGlobalNotifications(enabled: Boolean) {
         isGlobalNotificationsEnabled = enabled
         notifPrefs.isGlobalNotificationsEnabled = enabled
+        agenda.de.myapplicationanim1.data.util.AnimeAlarmScheduler.rescheduleAllAlarms(getApplication())
     }
 
     fun loadNotifiedAnimes() {
@@ -128,6 +129,7 @@ class SettingsViewModel @JvmOverloads constructor(
                     if (resource is Resource.Success) {
                         val anime = resource.data
                         notifPrefs.setAnimeNotificationsEnabled(anime, enabled = true)
+                        agenda.de.myapplicationanim1.data.util.AnimeAlarmScheduler.scheduleAlarm(getApplication(), anime)
                         _notifiedAnimes.value = notifPrefs.getNotifiedAnimes()
                     }
                 }
@@ -137,6 +139,7 @@ class SettingsViewModel @JvmOverloads constructor(
 
     fun removeNotifiedAnime(animeId: Int) {
         notifPrefs.setAnimeNotificationsEnabled(animeId = animeId, enabled = false)
+        agenda.de.myapplicationanim1.data.util.AnimeAlarmScheduler.cancelAlarm(getApplication(), animeId)
         _notifiedAnimes.value = notifPrefs.getNotifiedAnimes()
     }
 }

@@ -72,11 +72,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import agenda.de.myapplicationanim1.data.model.Anime
 import agenda.de.myapplicationanim1.data.model.BroadcastInfo
+import agenda.de.myapplicationanim1.data.util.AnimeAlarmScheduler
 import agenda.de.myapplicationanim1.data.util.NotificationPreferences
 import agenda.de.myapplicationanim1.ui.components.ErrorStateView
 import agenda.de.myapplicationanim1.ui.components.GlobalNotificationAction
 import agenda.de.myapplicationanim1.ui.components.ShimmerGridLoading
 import agenda.de.myapplicationanim1.ui.theme.MyApplicationAnim1Theme
+import agenda.de.myapplicationanim1.ui.util.rememberNotificationPermissionState
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import java.util.Locale
@@ -175,6 +177,7 @@ fun DetailsContent(
                 if (uiState is DetailsUiState.Success) {
                     val anime = uiState.anime
                     val context = LocalContext.current
+                    val permissionState = rememberNotificationPermissionState()
                     val prefs = remember { NotificationPreferences(context) }
                     var isNotifEnabled by remember { mutableStateOf(prefs.isAnimeNotificationsEnabled(anime.id)) }
 
@@ -513,8 +516,18 @@ fun DetailsContent(
                             // Notification Toggle Button
                             OutlinedButton(
                                 onClick = {
-                                    isNotifEnabled = !isNotifEnabled
-                                    prefs.setAnimeNotificationsEnabled(anime, isNotifEnabled)
+                                    val nextState = !isNotifEnabled
+                                    if (nextState) {
+                                        permissionState.requestPermissions {
+                                            isNotifEnabled = true
+                                            prefs.setAnimeNotificationsEnabled(anime, true)
+                                            AnimeAlarmScheduler.scheduleAlarm(context, anime)
+                                        }
+                                    } else {
+                                        isNotifEnabled = false
+                                        prefs.setAnimeNotificationsEnabled(anime, false)
+                                        AnimeAlarmScheduler.cancelAlarm(context, anime.id)
+                                    }
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()

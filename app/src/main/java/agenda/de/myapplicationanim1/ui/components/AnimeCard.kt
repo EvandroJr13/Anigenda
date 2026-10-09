@@ -48,8 +48,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import agenda.de.myapplicationanim1.data.model.Anime
 import agenda.de.myapplicationanim1.data.model.BroadcastInfo
+import agenda.de.myapplicationanim1.data.util.AnimeAlarmScheduler
 import agenda.de.myapplicationanim1.data.util.NotificationPreferences
 import agenda.de.myapplicationanim1.ui.theme.MyApplicationAnim1Theme
+import agenda.de.myapplicationanim1.ui.util.rememberNotificationPermissionState
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import java.util.Locale
@@ -61,6 +63,7 @@ fun AnimeCard(
     onClick: (Anime) -> Unit = {},
 ) {
     val context = LocalContext.current
+    val permissionState = rememberNotificationPermissionState()
     val prefs = remember { NotificationPreferences(context) }
     var isNotifEnabled by remember { mutableStateOf(prefs.isAnimeNotificationsEnabled(anime.id)) }
 
@@ -129,8 +132,18 @@ fun AnimeCard(
                 ) {
                     IconButton(
                         onClick = {
-                            isNotifEnabled = !isNotifEnabled
-                            prefs.setAnimeNotificationsEnabled(anime, isNotifEnabled)
+                            val nextState = !isNotifEnabled
+                            if (nextState) {
+                                permissionState.requestPermissions {
+                                    isNotifEnabled = true
+                                    prefs.setAnimeNotificationsEnabled(anime, true)
+                                    AnimeAlarmScheduler.scheduleAlarm(context, anime)
+                                }
+                            } else {
+                                isNotifEnabled = false
+                                prefs.setAnimeNotificationsEnabled(anime, false)
+                                AnimeAlarmScheduler.cancelAlarm(context, anime.id)
+                            }
                         },
                         modifier = Modifier.size(36.dp)
                     ) {

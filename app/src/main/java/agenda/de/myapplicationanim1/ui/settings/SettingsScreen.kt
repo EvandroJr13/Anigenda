@@ -54,6 +54,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import agenda.de.myapplicationanim1.data.util.NotifiedAnime
 import agenda.de.myapplicationanim1.data.util.SystemThemeMode
+import agenda.de.myapplicationanim1.ui.util.rememberNotificationPermissionState
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 
@@ -66,6 +67,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel? = null,
     onAnimeClick: (Int) -> Unit = {}
 ) {
+    val permissionState = rememberNotificationPermissionState()
     val notifiedAnimes by (viewModel?.notifiedAnimes?.collectAsState() ?: remember { mutableStateOf(emptyList()) })
     var customHexInput by remember(viewModel?.backgroundColorHex) {
         mutableStateOf(viewModel?.backgroundColorHex ?: "#0B0E14")
@@ -126,7 +128,13 @@ fun SettingsScreen(
                         Switch(
                             checked = viewModel?.isGlobalNotificationsEnabled ?: true,
                             onCheckedChange = { enabled ->
-                                viewModel?.toggleGlobalNotifications(enabled)
+                                if (enabled) {
+                                    permissionState.requestPermissions {
+                                        viewModel?.toggleGlobalNotifications(true)
+                                    }
+                                } else {
+                                    viewModel?.toggleGlobalNotifications(false)
+                                }
                             }
                         )
                     }
