@@ -25,8 +25,16 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.NotificationsActive
+import android.widget.Toast
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.SystemUpdate
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.runtime.rememberCoroutineScope
+import agenda.de.myapplicationanim1.update.UpdateDialog
+import agenda.de.myapplicationanim1.update.UpdateInfo
+import agenda.de.myapplicationanim1.update.UpdateManager
+import kotlinx.coroutines.launch
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -172,6 +180,93 @@ fun SettingsScreen(
                             }
                         )
                     }
+                }
+            }
+
+            // Atualização do Aplicativo (GitHub Releases)
+            item {
+                val context = LocalContext.current
+                val scope = rememberCoroutineScope()
+                var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+                var showUpdateDialog by remember { mutableStateOf(false) }
+                var isChecking by remember { mutableStateOf(false) }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.SystemUpdate,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Atualização do App",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Versão atual: ${remember {
+                                    try {
+                                        context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0"
+                                    } catch (e: Exception) { "1.0" }
+                                }}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                if (!isChecking) {
+                                    isChecking = true
+                                    scope.launch {
+                                        val manager = UpdateManager(context, "EvandroJr13", "Anime_Schedule")
+                                        val info = manager.checkForUpdate()
+                                        isChecking = false
+                                        if (info != null) {
+                                            updateInfo = info
+                                            showUpdateDialog = true
+                                        } else {
+                                            Toast.makeText(
+                                                context,
+                                                "Seu aplicativo já está na versão mais recente!",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    }
+                                }
+                            },
+                            enabled = !isChecking
+                        ) {
+                            Text(if (isChecking) "Verificando..." else "Verificar")
+                        }
+                    }
+                }
+
+                if (showUpdateDialog && updateInfo != null) {
+                    UpdateDialog(
+                        updateInfo = updateInfo!!,
+                        onDismiss = { showUpdateDialog = false },
+                        onConfirm = {
+                            showUpdateDialog = false
+                            val manager = UpdateManager(context, "EvandroJr13", "Anime_Schedule")
+                            manager.downloadAndInstall(updateInfo!!.apkUrl)
+                        }
+                    )
                 }
             }
 
