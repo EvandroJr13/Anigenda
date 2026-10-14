@@ -60,6 +60,7 @@ import java.util.Locale
 fun AnimeCard(
     anime: Anime,
     modifier: Modifier = Modifier,
+    selectedDayName: String = "Hoje",
     onClick: (Anime) -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -79,7 +80,7 @@ fun AnimeCard(
         )
     ) {
         Column {
-            // Image with Overlays
+            // Image Container with Overlays
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -156,7 +157,7 @@ fun AnimeCard(
                     }
                 }
 
-                // Score Badge (Top-End)
+                // Rating Score Badge (Top-Right)
                 val scoreText = if (anime.score > 0.0) {
                     String.format(Locale.US, "%.1f", anime.score)
                 } else {
@@ -188,21 +189,23 @@ fun AnimeCard(
                     }
                 }
 
-                // Episode badge (if available)
-                if (anime.episodes > 0) {
-                    Surface(
-                        shape = RoundedCornerShape(topStart = 12.dp, bottomEnd = 12.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
-                        modifier = Modifier.align(Alignment.BottomStart)
-                    ) {
-                        Text(
-                            text = "${anime.episodes} eps",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
+                // Episode Badge e.g. "EP 10 • Hoje" (Bottom-Left)
+                val epNum = anime.nextAiringEpisode?.episode ?: if (anime.episodes > 0) anime.episodes else 1
+                val dayLabel = if (selectedDayName.equals("Hoje", ignoreCase = true)) "Hoje" else selectedDayName
+                val episodeBadgeText = "EP $epNum • $dayLabel"
+
+                Surface(
+                    shape = RoundedCornerShape(topStart = 12.dp, bottomEnd = 12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.92f),
+                    modifier = Modifier.align(Alignment.BottomStart)
+                ) {
+                    Text(
+                        text = episodeBadgeText,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
                 }
             }
 

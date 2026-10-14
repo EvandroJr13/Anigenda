@@ -5,38 +5,51 @@ import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
 data class AniListResponse(
-    val data: AniListData?
+    @Json(name = "data")
+    val data: AniListData? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class AniListData(
     @Json(name = "Page")
-    val page: PageDto?,
+    val page: PageDto? = null,
     @Json(name = "Media")
-    val media: MediaDto?
+    val media: MediaDto? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class PageDto(
-    val media: List<MediaDto>?
+    @Json(name = "media")
+    val media: List<MediaDto>? = emptyList()
 )
 
 @JsonClass(generateAdapter = true)
 data class MediaDto(
-    val id: Int,
-    val title: TitleDto?,
+    @Json(name = "id")
+    val id: Int = 0,
+    @Json(name = "title")
+    val title: TitleDto? = null,
     @Json(name = "coverImage")
-    val coverImage: CoverImageDto?,
-    val description: String?,
+    val coverImage: CoverImageDto? = null,
+    @Json(name = "description")
+    val description: String? = null,
     @Json(name = "averageScore")
-    val averageScore: Int?,
-    val episodes: Int?,
-    val status: String?,
-    val startDate: StartDateDto?,
-    val nextAiringEpisode: NextAiringEpisodeDto?,
-    val genres: List<String>?,
-    val studios: StudioConnectionDto?,
-    val trailer: TrailerDto?,
+    val averageScore: Int? = null,
+    @Json(name = "episodes")
+    val episodes: Int? = null,
+    @Json(name = "status")
+    val status: String? = null,
+    @Json(name = "startDate")
+    val startDate: StartDateDto? = null,
+    @Json(name = "nextAiringEpisode")
+    val nextAiringEpisode: NextAiringEpisodeDto? = null,
+    @Json(name = "genres")
+    val genres: List<String>? = emptyList(),
+    @Json(name = "studios")
+    val studios: StudioConnectionDto? = null,
+    @Json(name = "trailer")
+    val trailer: TrailerDto? = null,
+    @Json(name = "isAdult")
     val isAdult: Boolean? = false,
     @Json(name = "externalLinks")
     val externalLinks: List<ExternalLinkDto>? = emptyList()
@@ -44,48 +57,64 @@ data class MediaDto(
 
 @JsonClass(generateAdapter = true)
 data class ExternalLinkDto(
-    val site: String?,
-    val url: String?
+    @Json(name = "site")
+    val site: String? = null,
+    @Json(name = "url")
+    val url: String? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class TitleDto(
-    val romaji: String?,
-    val english: String?,
-    val native: String?
+    @Json(name = "romaji")
+    val romaji: String? = null,
+    @Json(name = "english")
+    val english: String? = null,
+    @Json(name = "native")
+    val native: String? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class CoverImageDto(
+    @Json(name = "extraLarge")
     val extraLarge: String? = null,
+    @Json(name = "large")
     val large: String? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class StartDateDto(
-    val year: Int?,
-    val month: Int?,
-    val day: Int?
+    @Json(name = "year")
+    val year: Int? = null,
+    @Json(name = "month")
+    val month: Int? = null,
+    @Json(name = "day")
+    val day: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class NextAiringEpisodeDto(
-    val airingAt: Long?,
-    val episode: Int?
+    @Json(name = "airingAt")
+    val airingAt: Long? = null,
+    @Json(name = "episode")
+    val episode: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class StudioConnectionDto(
-    val nodes: List<StudioDto>?
+    @Json(name = "nodes")
+    val nodes: List<StudioDto>? = emptyList()
 )
 
 @JsonClass(generateAdapter = true)
 data class StudioDto(
-    val name: String?
+    @Json(name = "name")
+    val name: String? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class TrailerDto(
-    val id: String?,
-    val site: String?
+    @Json(name = "id")
+    val id: String? = null,
+    @Json(name = "site")
+    val site: String? = null
 )

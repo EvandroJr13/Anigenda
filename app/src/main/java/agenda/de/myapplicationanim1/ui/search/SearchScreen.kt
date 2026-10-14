@@ -3,6 +3,8 @@ package agenda.de.myapplicationanim1.ui.search
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -43,16 +46,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
+import agenda.de.myapplicationanim1.ui.theme.ChewyFontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import agenda.de.myapplicationanim1.R
 import agenda.de.myapplicationanim1.data.model.Anime
 import agenda.de.myapplicationanim1.ui.components.AnimeCard
+import agenda.de.myapplicationanim1.ui.components.ApiSourceFooter
 import agenda.de.myapplicationanim1.ui.components.EmptyStateView
 import agenda.de.myapplicationanim1.ui.components.ErrorStateView
 import agenda.de.myapplicationanim1.ui.components.GlobalNotificationAction
@@ -114,17 +124,28 @@ fun SearchContent(
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Search,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.app_logo),
+                                contentDescription = "AG Logo",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
                         Text(
-                            text = "Buscar Animes",
+                            text = "Explorar Animes",
+                            fontFamily = ChewyFontFamily,
+                            fontSize = 28.sp,
                             fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleLarge
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 },
@@ -142,7 +163,7 @@ fun SearchContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(top = innerPadding.calculateTopPadding())
         ) {
             // Search OutlinedTextField Header
             Surface(
@@ -282,7 +303,11 @@ fun SearchContent(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Main Content Area
-            Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
                 AnimatedVisibility(
                     visible = uiState is SearchUiState.Idle,
                     enter = fadeIn(),
@@ -377,6 +402,8 @@ fun SearchContent(
                     }
                 }
             }
+
+            ApiSourceFooter(text = "Dados fornecidos por: AniList API")
         }
     }
 }

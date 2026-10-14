@@ -63,6 +63,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import agenda.de.myapplicationanim1.ui.theme.ChewyFontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -120,8 +121,10 @@ fun DetailsContent(
                 title = {
                     Text(
                         text = "Detalhes do Anime",
+                        fontFamily = ChewyFontFamily,
+                        fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge
+                        color = MaterialTheme.colorScheme.onBackground
                     )
                 },
                 navigationIcon = {

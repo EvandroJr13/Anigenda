@@ -1,14 +1,17 @@
 package agenda.de.myapplicationanim1.data.remote
 
+import android.content.Context
 import android.util.Log
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import okhttp3.Cache
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 class RateLimitRetryInterceptor : Interceptor {
@@ -39,6 +42,12 @@ object RetrofitClient {
     private const val BASE_URL = "https://graphql.anilist.co/"
     private const val CDN_BASE_URL = "https://cdn.jsdelivr.net/"
 
+    private var appContext: Context? = null
+
+    fun init(context: Context) {
+        appContext = context.applicationContext
+    }
+
     private val moshi: Moshi by lazy {
         Moshi.Builder()
             .addLast(KotlinJsonAdapterFactory())
@@ -51,12 +60,21 @@ object RetrofitClient {
         }.apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
-        OkHttpClient.Builder()
+        val builder = OkHttpClient.Builder()
             .addInterceptor(RateLimitRetryInterceptor())
             .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
-            .build()
+
+        appContext?.let { ctx ->
+            try {
+                val cacheDir = File(ctx.cacheDir, "okhttp_cache")
+                val cache = Cache(cacheDir, 50L * 1024L * 1024L)
+                builder.cache(cache)
+            } catch (_: Exception) {}
+        }
+
+        builder.build()
     }
 
     val aniListApiService: AniListApiService by lazy {
