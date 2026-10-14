@@ -36,6 +36,7 @@ import agenda.de.myapplicationanim1.update.UpdateInfo
 import agenda.de.myapplicationanim1.update.UpdateManager
 import kotlinx.coroutines.launch
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -415,8 +416,27 @@ fun SettingsScreen(
                 }
             }
 
-            // Custom Background Color Input
+            // Custom Background Color Input (HEX & RGB)
             item {
+                val initialRgb = remember(viewModel?.backgroundColorHex) {
+                    try {
+                        val hex = viewModel?.backgroundColorHex ?: "#0B0E14"
+                        val cleaned = hex.removePrefix("#")
+                        Triple(
+                            cleaned.substring(0, 2).toInt(16),
+                            cleaned.substring(2, 4).toInt(16),
+                            cleaned.substring(4, 6).toInt(16)
+                        )
+                    } catch (e: Exception) {
+                        Triple(11, 14, 20)
+                    }
+                }
+
+                var colorInputMode by remember { mutableStateOf("HEX") }
+                var redInput by remember(initialRgb) { mutableStateOf(initialRgb.first.toString()) }
+                var greenInput by remember(initialRgb) { mutableStateOf(initialRgb.second.toString()) }
+                var blueInput by remember(initialRgb) { mutableStateOf(initialRgb.third.toString()) }
+
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -433,40 +453,122 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Cor de Fundo Personalizada (Hex)",
+                                text = "Cor de Fundo Personalizada (HEX / RGB)",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                         Spacer(modifier = Modifier.height(8.dp))
+
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            OutlinedTextField(
-                                value = customHexInput,
-                                onValueChange = { newValue ->
-                                    customHexInput = newValue
-                                    if (newValue.length == 7 && newValue.startsWith("#")) {
-                                        viewModel?.updateBackgroundColor(newValue)
-                                    }
-                                },
-                                label = { Text("Ex: #0B0E14, #000000, #0A1128") },
-                                singleLine = true,
+                            FilterChip(
+                                selected = colorInputMode == "HEX",
+                                onClick = { colorInputMode = "HEX" },
+                                label = { Text("Formato HEX") },
                                 modifier = Modifier.weight(1f)
                             )
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(
-                                        agenda.de.myapplicationanim1.ui.theme.parseHexColor(
-                                            customHexInput,
-                                            MaterialTheme.colorScheme.background
-                                        )
-                                    )
+                            FilterChip(
+                                selected = colorInputMode == "RGB",
+                                onClick = { colorInputMode = "RGB" },
+                                label = { Text("Formato RGB") },
+                                modifier = Modifier.weight(1f)
                             )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        if (colorInputMode == "HEX") {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = customHexInput,
+                                    onValueChange = { newValue ->
+                                        customHexInput = newValue
+                                        if (newValue.length == 7 && newValue.startsWith("#")) {
+                                            viewModel?.updateBackgroundColor(newValue)
+                                        }
+                                    },
+                                    label = { Text("Ex: #0B0E14, #000000, #0A1128") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(
+                                            agenda.de.myapplicationanim1.ui.theme.parseHexColor(
+                                                customHexInput,
+                                                MaterialTheme.colorScheme.background
+                                            )
+                                        )
+                                )
+                            }
+                        } else {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = redInput,
+                                    onValueChange = {
+                                        redInput = it
+                                        val r = it.toIntOrNull() ?: 0
+                                        val g = greenInput.toIntOrNull() ?: 0
+                                        val b = blueInput.toIntOrNull() ?: 0
+                                        val hex = String.format("#%02X%02X%02X", r.coerceIn(0, 255), g.coerceIn(0, 255), b.coerceIn(0, 255))
+                                        viewModel?.updateBackgroundColor(hex)
+                                    },
+                                    label = { Text("R (0-255)") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    value = greenInput,
+                                    onValueChange = {
+                                        greenInput = it
+                                        val r = redInput.toIntOrNull() ?: 0
+                                        val g = it.toIntOrNull() ?: 0
+                                        val b = blueInput.toIntOrNull() ?: 0
+                                        val hex = String.format("#%02X%02X%02X", r.coerceIn(0, 255), g.coerceIn(0, 255), b.coerceIn(0, 255))
+                                        viewModel?.updateBackgroundColor(hex)
+                                    },
+                                    label = { Text("G (0-255)") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                OutlinedTextField(
+                                    value = blueInput,
+                                    onValueChange = {
+                                        blueInput = it
+                                        val r = redInput.toIntOrNull() ?: 0
+                                        val g = greenInput.toIntOrNull() ?: 0
+                                        val b = it.toIntOrNull() ?: 0
+                                        val hex = String.format("#%02X%02X%02X", r.coerceIn(0, 255), g.coerceIn(0, 255), b.coerceIn(0, 255))
+                                        viewModel?.updateBackgroundColor(hex)
+                                    },
+                                    label = { Text("B (0-255)") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(
+                                            agenda.de.myapplicationanim1.ui.theme.parseHexColor(
+                                                viewModel?.backgroundColorHex ?: "#0B0E14",
+                                                MaterialTheme.colorScheme.background
+                                            )
+                                        )
+                                )
+                            }
                         }
                     }
                 }
