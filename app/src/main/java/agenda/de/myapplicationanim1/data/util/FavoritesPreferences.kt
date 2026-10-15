@@ -24,6 +24,7 @@ data class FavoriteEpisode(
     val episodeNumber: Int,
     val episodeTitle: String = "",
     val imageUrl: String = "",
+    val comment: String = "",
     val addedAtMillis: Long = System.currentTimeMillis()
 )
 
@@ -149,6 +150,16 @@ class FavoritesPreferences(context: Context) {
 
         prefs.edit().putString(KEY_FAVORITE_EPISODES, episodeAdapter.toJson(current)).apply()
         return isNowFavorite
+    }
+
+    fun updateEpisodeComment(animeId: Int, episodeNumber: Int, newComment: String) {
+        val current = getFavoriteEpisodes().toMutableList()
+        val targetId = "${animeId}_ep_${episodeNumber}"
+        val index = current.indexOfFirst { it.id == targetId }
+        if (index != -1) {
+            current[index] = current[index].copy(comment = newComment)
+            prefs.edit().putString(KEY_FAVORITE_EPISODES, episodeAdapter.toJson(current)).apply()
+        }
     }
 
     companion object {

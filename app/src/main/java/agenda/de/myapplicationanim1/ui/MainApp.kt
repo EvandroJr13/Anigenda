@@ -1,6 +1,7 @@
 package agenda.de.myapplicationanim1.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -121,61 +122,63 @@ fun MainApp(
                     .fillMaxSize()
                     .padding(if (currentScreen is AppScreen.Details) PaddingValues(0.dp) else innerPadding)
             ) {
-                when (currentScreen) {
-                    is AppScreen.Schedule -> {
-                        ScheduleScreen(
-                            onAnimeClick = { anime ->
-                                backStack.add(AppScreen.Details(anime.id))
-                            }
-                        )
-                    }
-                    is AppScreen.Popular -> {
-                        val popularViewModel: PopularViewModel = viewModel()
-                        PopularScreen(
-                            viewModel = popularViewModel,
-                            onAnimeClick = { anime ->
-                                backStack.add(AppScreen.Details(anime.id))
-                            }
-                        )
-                    }
-                    is AppScreen.Search -> {
-                        SearchScreen(
-                            onAnimeClick = { anime ->
-                                backStack.add(AppScreen.Details(anime.id))
-                            }
-                        )
-                    }
-                    is AppScreen.Favorites -> {
-                        FavoritesScreen(
-                            onAnimeClick = { animeId ->
-                                backStack.add(AppScreen.Details(animeId))
-                            }
-                        )
-                    }
-                    is AppScreen.Settings -> {
-                        SettingsScreen(
-                            currentTheme = settingsViewModel.themeMode,
-                            onThemeSelected = { newMode ->
-                                settingsViewModel.updateThemeMode(newMode)
-                            },
-                            viewModel = settingsViewModel,
-                            onAnimeClick = { animeId ->
-                                backStack.add(AppScreen.Details(animeId))
-                            }
-                        )
-                    }
-                    is AppScreen.Details -> {
-                        DetailsScreen(
-                            animeId = currentScreen.animeId,
-                            onBackClick = {
-                                if (backStack.size > 1) {
-                                    backStack.removeAt(backStack.lastIndex)
-                                } else {
-                                    backStack.clear()
-                                    backStack.add(AppScreen.Schedule)
+                Crossfade(targetState = currentScreen, label = "TabTransition") { screen ->
+                    when (screen) {
+                        is AppScreen.Schedule -> {
+                            ScheduleScreen(
+                                onAnimeClick = { anime ->
+                                    backStack.add(AppScreen.Details(anime.id))
                                 }
-                            }
-                        )
+                            )
+                        }
+                        is AppScreen.Popular -> {
+                            val popularViewModel: PopularViewModel = viewModel()
+                            PopularScreen(
+                                viewModel = popularViewModel,
+                                onAnimeClick = { anime ->
+                                    backStack.add(AppScreen.Details(anime.id))
+                                }
+                            )
+                        }
+                        is AppScreen.Search -> {
+                            SearchScreen(
+                                onAnimeClick = { anime ->
+                                    backStack.add(AppScreen.Details(anime.id))
+                                }
+                            )
+                        }
+                        is AppScreen.Favorites -> {
+                            FavoritesScreen(
+                                onAnimeClick = { animeId ->
+                                    backStack.add(AppScreen.Details(animeId))
+                                }
+                            )
+                        }
+                        is AppScreen.Settings -> {
+                            SettingsScreen(
+                                currentTheme = settingsViewModel.themeMode,
+                                onThemeSelected = { newMode ->
+                                    settingsViewModel.updateThemeMode(newMode)
+                                },
+                                viewModel = settingsViewModel,
+                                onAnimeClick = { animeId ->
+                                    backStack.add(AppScreen.Details(animeId))
+                                }
+                            )
+                        }
+                        is AppScreen.Details -> {
+                            DetailsScreen(
+                                animeId = screen.animeId,
+                                onBackClick = {
+                                    if (backStack.size > 1) {
+                                        backStack.removeAt(backStack.lastIndex)
+                                    } else {
+                                        backStack.clear()
+                                        backStack.add(AppScreen.Schedule)
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             }

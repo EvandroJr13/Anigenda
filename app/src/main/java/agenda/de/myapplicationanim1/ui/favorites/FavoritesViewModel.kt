@@ -48,4 +48,9 @@ class FavoritesViewModel(application: Application) : AndroidViewModel(applicatio
             loadFavorites()
         }
     }
+
+    fun updateEpisodeComment(animeId: Int, episodeNumber: Int, comment: String) {
+        prefs.updateEpisodeComment(animeId, episodeNumber, comment)
+        loadFavorites()
+    }
 }
