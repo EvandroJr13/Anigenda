@@ -1,9 +1,8 @@
 package agenda.de.myapplicationanim1.update
 
-import android.app.DownloadManager
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
-import android.os.Environment
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -39,16 +38,18 @@ class UpdateManager(
                 val apkAsset = release.assets?.find { it.name.endsWith(".apk", ignoreCase = true) }
                     ?: release.assets?.firstOrNull()
 
-                if (apkAsset != null) {
-                    return@withContext UpdateInfo(
-                        versionName = release.tagName,
-                        releaseNotes = release.body,
-                        apkUrl = apkAsset.browserDownloadUrl
-                    )
-                }
+                val downloadUrl = apkAsset?.browserDownloadUrl 
+                    ?: release.htmlUrl 
+                    ?: "https://github.com/$repoOwner/$repoName/releases/latest"
+
+                return@withContext UpdateInfo(
+                    versionName = release.tagName,
+                    releaseNotes = release.body,
+                    apkUrl = downloadUrl
+                )
             }
         } catch (e: Exception) {
-            Log.e("UpdateManager", "Error checking for updates", e)
+            Log.e("UpdateManager", "Error checking for updates from GitHub", e)
         }
         return@withContext null
     }
@@ -81,27 +82,15 @@ class UpdateManager(
 
     fun downloadAndInstall(apkUrl: String) {
         try {
-            val request = DownloadManager.Request(Uri.parse(apkUrl))
-                .setTitle("Atualização do Aplicativo")
-                .setDescription("Baixando nova versão...")
-                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, "update.apk")
-                .setAllowedOverMetered(true)
-                .setAllowedOverRoaming(true)
-
-            val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
-            dm.enqueue(request)
-
-            android.widget.Toast.makeText(
-                context,
-                "Download da atualização iniciado na barra de notificações.",
-                android.widget.Toast.LENGTH_LONG
-            ).show()
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(apkUrl)).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
         } catch (e: Exception) {
-            Log.e("UpdateManager", "Error downloading update", e)
+            Log.e("UpdateManager", "Error opening update URL", e)
             android.widget.Toast.makeText(
                 context,
-                "Erro ao iniciar download: ${e.localizedMessage}",
+                "Erro ao abrir link de download: ${e.localizedMessage}",
                 android.widget.Toast.LENGTH_LONG
             ).show()
         }
