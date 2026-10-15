@@ -1,7 +1,12 @@
 package agenda.de.myapplicationanim1.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.Crossfade
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -126,7 +131,17 @@ fun MainApp(
                     .fillMaxSize()
                     .padding(if (currentScreen is AppScreen.Details) PaddingValues(0.dp) else innerPadding)
             ) {
-                Crossfade(targetState = currentScreen, label = "TabTransition") { screen ->
+                AnimatedContent(
+                    targetState = currentScreen,
+                    transitionSpec = {
+                        fadeIn() + slideInHorizontally(
+                            initialOffsetX = { fullWidth -> fullWidth / 3 }
+                        ) togetherWith fadeOut() + slideOutHorizontally(
+                            targetOffsetX = { fullWidth -> -fullWidth / 3 }
+                        )
+                    },
+                    label = "TabSlideTransition"
+                ) { screen ->
                     when (screen) {
                         is AppScreen.Schedule -> {
                             ScheduleScreen(

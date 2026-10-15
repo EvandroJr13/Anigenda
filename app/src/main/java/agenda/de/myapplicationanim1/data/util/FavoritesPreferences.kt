@@ -6,6 +6,7 @@ import agenda.de.myapplicationanim1.data.model.Anime
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import java.io.File
 
 data class FavoriteAnime(
     val id: Int,
@@ -38,6 +39,37 @@ class FavoritesPreferences(context: Context) {
 
     private val episodeListType = Types.newParameterizedType(List::class.java, FavoriteEpisode::class.java)
     private val episodeAdapter = moshi.adapter<List<FavoriteEpisode>>(episodeListType)
+
+    private val backupFile = File(context.filesDir, "anime_favorites_backup.json")
+
+    init {
+        checkAndRestoreAutoBackup()
+    }
+
+    private fun checkAndRestoreAutoBackup() {
+        val currentJson = prefs.getString(KEY_FAVORITE_ANIMES, "[]") ?: "[]"
+        if (currentJson == "[]" && backupFile.exists()) {
+            try {
+                val fileContent = backupFile.readText()
+                if (fileContent.isNotBlank()) {
+                    prefs.edit().putString(KEY_FAVORITE_ANIMES, fileContent).apply()
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    private fun saveAnimes(current: List<FavoriteAnime>) {
+        val json = animeAdapter.toJson(current)
+        prefs.edit().putString(KEY_FAVORITE_ANIMES, json).apply()
+        try {
+            backupFile.writeText(json)
+        } catch (_: Exception) {}
+    }
+
+    private fun saveEpisodes(current: List<FavoriteEpisode>) {
+        val json = episodeAdapter.toJson(current)
+        prefs.edit().putString(KEY_FAVORITE_EPISODES, json).apply()
+    }
 
     fun getFavoriteAnimes(): List<FavoriteAnime> {
         val json = prefs.getString(KEY_FAVORITE_ANIMES, "[]") ?: "[]"
@@ -75,7 +107,7 @@ class FavoritesPreferences(context: Context) {
             isNowFavorite = true
         }
 
-        prefs.edit().putString(KEY_FAVORITE_ANIMES, animeAdapter.toJson(current)).apply()
+        saveAnimes(current)
         return isNowFavorite
     }
 
@@ -100,7 +132,7 @@ class FavoritesPreferences(context: Context) {
             isNowFavorite = true
         }
 
-        prefs.edit().putString(KEY_FAVORITE_ANIMES, animeAdapter.toJson(current)).apply()
+        saveAnimes(current)
         return isNowFavorite
     }
 
@@ -148,7 +180,7 @@ class FavoritesPreferences(context: Context) {
             isNowFavorite = true
         }
 
-        prefs.edit().putString(KEY_FAVORITE_EPISODES, episodeAdapter.toJson(current)).apply()
+        saveEpisodes(current)
         return isNowFavorite
     }
 
@@ -158,7 +190,7 @@ class FavoritesPreferences(context: Context) {
         val index = current.indexOfFirst { it.id == targetId }
         if (index != -1) {
             current[index] = current[index].copy(comment = newComment)
-            prefs.edit().putString(KEY_FAVORITE_EPISODES, episodeAdapter.toJson(current)).apply()
+            saveEpisodes(current)
         }
     }
 
