@@ -31,7 +31,10 @@ import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.runtime.rememberCoroutineScope
+import agenda.de.myapplicationanim1.data.util.BackupManager
 import agenda.de.myapplicationanim1.update.UpdateCheckResult
+import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material3.OutlinedButton
 import agenda.de.myapplicationanim1.update.UpdateDialog
 import agenda.de.myapplicationanim1.update.UpdateInfo
 import agenda.de.myapplicationanim1.update.UpdateManager
@@ -279,6 +282,78 @@ fun SettingsScreen(
                             manager.downloadAndInstall(updateInfo!!.apkUrl)
                         }
                     )
+                }
+            }
+
+            // Backup & Restore Data
+            item {
+                val context = LocalContext.current
+                val backupManager = remember { BackupManager(context) }
+                val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Rounded.Storage,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = "Backup e Restauração de Dados",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Exporte ou importe seus animes e episódios favoritos para nunca perder seus dados.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    val json = backupManager.exportBackupJson()
+                                    clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(json))
+                                    Toast.makeText(context, "Backup copiado para a área de transferência!", Toast.LENGTH_LONG).show()
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Exportar Backup")
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    val clip = clipboardManager.getText()?.text
+                                    if (!clip.isNullOrBlank()) {
+                                        val success = backupManager.importBackupJson(clip)
+                                        if (success) {
+                                            Toast.makeText(context, "Backup restaurado com sucesso!", Toast.LENGTH_LONG).show()
+                                        } else {
+                                            Toast.makeText(context, "Erro: texto de backup inválido.", Toast.LENGTH_LONG).show()
+                                        }
+                                    } else {
+                                        Toast.makeText(context, "Área de transferência vazia.", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Restaurar Backup")
+                            }
+                        }
+                    }
                 }
             }
 
