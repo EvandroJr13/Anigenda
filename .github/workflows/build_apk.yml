@@ -1,4 +1,4 @@
-name: Build and Release APK
+name: Build and Distribute to Firebase
 
 on:
   push:
@@ -31,10 +31,10 @@ jobs:
       - name: Build Release APK
         run: ./gradlew assembleRelease
 
-      - name: Create Release and Upload APK
-        uses: softprops/action-gh-release@v2
+      - name: Upload to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
         with:
-          files: app/build/outputs/apk/release/app-release.apk
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          token: ${{ secrets.FIREBASE_TOKEN }}
+          file: app/build/outputs/apk/release/app-release.apk
+          releaseNotes: "Nova atualização automática do aplicativo!"
