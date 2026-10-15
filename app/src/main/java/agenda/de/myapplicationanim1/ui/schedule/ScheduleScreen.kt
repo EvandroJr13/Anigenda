@@ -40,6 +40,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -74,6 +75,8 @@ fun ScheduleScreen(
     modifier: Modifier = Modifier,
     viewModel: ScheduleViewModel = viewModel(),
     onAnimeClick: (Anime) -> Unit = {},
+    showFrontPageOnLaunch: Boolean = true,
+    onFrontPageShown: () -> Unit = {}
 ) {
     val selectedDay by viewModel.selectedDay.collectAsStateWithLifecycle()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -84,6 +87,8 @@ fun ScheduleScreen(
         onDaySelected = { viewModel.selectDay(it) },
         onRetry = { viewModel.retry() },
         onAnimeClick = onAnimeClick,
+        showFrontPageOnLaunch = showFrontPageOnLaunch,
+        onFrontPageShown = onFrontPageShown,
         modifier = modifier
     )
 }
@@ -96,9 +101,11 @@ fun ScheduleContent(
     onDaySelected: (ScheduleDay) -> Unit,
     onRetry: () -> Unit,
     onAnimeClick: (Anime) -> Unit,
+    showFrontPageOnLaunch: Boolean = true,
+    onFrontPageShown: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    var showFrontPage by rememberSaveable { mutableStateOf(true) }
+    var showFrontPage by remember { mutableStateOf(showFrontPageOnLaunch) }
 
     // Front Page / Destaque do Dia Dialog on launch
     if (showFrontPage && uiState is ScheduleUiState.Success) {
@@ -108,9 +115,13 @@ fun ScheduleContent(
             if (featuredAnime != null) {
                 FrontPageDialog(
                     anime = featuredAnime,
-                    onDismiss = { showFrontPage = false },
+                    onDismiss = {
+                        showFrontPage = false
+                        onFrontPageShown()
+                    },
                     onViewDetails = { anime ->
                         showFrontPage = false
+                        onFrontPageShown()
                         onAnimeClick(anime)
                     }
                 )

@@ -13,8 +13,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,6 +40,7 @@ fun MainApp(
     settingsViewModel: SettingsViewModel = viewModel(),
     initialAnimeId: Int? = null
 ) {
+    var hasShownFrontPage by remember { mutableStateOf(false) }
     val initialStack = remember(initialAnimeId) {
         if (initialAnimeId != null && initialAnimeId > 0) {
             listOf(AppScreen.Schedule, AppScreen.Details(initialAnimeId))
@@ -126,6 +130,8 @@ fun MainApp(
                     when (screen) {
                         is AppScreen.Schedule -> {
                             ScheduleScreen(
+                                showFrontPageOnLaunch = !hasShownFrontPage,
+                                onFrontPageShown = { hasShownFrontPage = true },
                                 onAnimeClick = { anime ->
                                     backStack.add(AppScreen.Details(anime.id))
                                 }
