@@ -13,8 +13,8 @@ android {
         applicationId = "agenda.de.myapplicationanim1"
         minSdk = 29
         targetSdk = 35
-        versionCode = 10
-        versionName = "1.7"
+        versionCode = 11
+        versionName = "1.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -63,19 +63,6 @@ dependencies {
     implementation(libs.logging.interceptor)
     implementation(libs.moshi.kotlin)
     implementation(libs.okhttp)
-    implementation(libs.play.services.location)
     implementation(libs.retrofit)
-    testImplementation(libs.androidx.core)
-    testImplementation(libs.androidx.junit)
-    testImplementation(libs.junit)
-    testImplementation(libs.kotlinx.coroutines.test)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.runner)
-    debugImplementation(libs.androidx.compose.ui.test.manifest)
-    debugImplementation(libs.androidx.compose.ui.tooling)
-    "ksp"(libs.androidx.room.compiler)
-    "ksp"(libs.moshi.kotlin.codegen)
 }
+
