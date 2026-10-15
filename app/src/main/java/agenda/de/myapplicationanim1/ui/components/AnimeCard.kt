@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.NotificationsOff
@@ -49,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import agenda.de.myapplicationanim1.data.model.Anime
 import agenda.de.myapplicationanim1.data.model.BroadcastInfo
 import agenda.de.myapplicationanim1.data.util.AnimeAlarmScheduler
+import agenda.de.myapplicationanim1.data.util.FavoritesPreferences
 import agenda.de.myapplicationanim1.data.util.NotificationPreferences
 import agenda.de.myapplicationanim1.ui.theme.MyApplicationAnim1Theme
 import agenda.de.myapplicationanim1.ui.util.rememberNotificationPermissionState
@@ -66,7 +69,9 @@ fun AnimeCard(
     val context = LocalContext.current
     val permissionState = rememberNotificationPermissionState()
     val prefs = remember { NotificationPreferences(context) }
+    val favPrefs = remember { FavoritesPreferences(context) }
     var isNotifEnabled by remember { mutableStateOf(prefs.isAnimeNotificationsEnabled(anime.id)) }
+    var isFavorite by remember(anime.id) { mutableStateOf(favPrefs.isAnimeFavorite(anime.id)) }
 
     ElevatedCard(
         modifier = modifier
@@ -157,7 +162,7 @@ fun AnimeCard(
                     }
                 }
 
-                // Rating Score Badge (Top-Right)
+                // Rating Score & Favorite Heart Badge (Top-Right)
                 val scoreText = if (anime.score > 0.0) {
                     String.format(Locale.US, "%.1f", anime.score)
                 } else {
@@ -171,8 +176,21 @@ fun AnimeCard(
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
+                        IconButton(
+                            onClick = {
+                                isFavorite = favPrefs.toggleAnimeFavorite(anime)
+                            },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                contentDescription = "Amei este anime",
+                                tint = if (isFavorite) Color(0xFFFF4081) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                         Icon(
                             imageVector = Icons.Rounded.Star,
                             contentDescription = "Rating",
@@ -186,6 +204,7 @@ fun AnimeCard(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
+                        Spacer(modifier = Modifier.width(4.dp))
                     }
                 }
 

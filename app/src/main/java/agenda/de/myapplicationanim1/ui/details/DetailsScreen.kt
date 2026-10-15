@@ -25,6 +25,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import agenda.de.myapplicationanim1.data.util.FavoritesPreferences
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.NotificationsOff
@@ -136,6 +139,23 @@ fun DetailsContent(
                     }
                 },
                 actions = {
+                    if (uiState is DetailsUiState.Success) {
+                        val anime = uiState.anime
+                        val context = LocalContext.current
+                        val favPrefs = remember { FavoritesPreferences(context) }
+                        var isFav by remember(anime.id) { mutableStateOf(favPrefs.isAnimeFavorite(anime.id)) }
+                        IconButton(
+                            onClick = {
+                                isFav = favPrefs.toggleAnimeFavorite(anime)
+                            }
+                        ) {
+                            Icon(
+                                imageVector = if (isFav) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                contentDescription = "Amei este anime",
+                                tint = if (isFav) Color(0xFFFF4081) else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
                     GlobalNotificationAction()
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -556,6 +576,70 @@ fun DetailsContent(
                                         style = MaterialTheme.typography.labelLarge,
                                         color = if (isNotifEnabled) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
                                     )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(24.dp))
+
+                            // Episode Favorites Section
+                            val favPrefs = remember { FavoritesPreferences(context) }
+                            val totalEps = if (anime.episodes in 1..50) anime.episodes else 12
+                            Text(
+                                text = "Episódios ($totalEps)",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                for (epNum in 1..totalEps) {
+                                    var isEpFav by remember(anime.id, epNum) {
+                                        mutableStateOf(favPrefs.isEpisodeFavorite(anime.id, epNum))
+                                    }
+                                    Card(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.surfaceContainer
+                                        )
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Tv,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Text(
+                                                text = "Episódio $epNum",
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            IconButton(
+                                                onClick = {
+                                                    isEpFav = favPrefs.toggleEpisodeFavorite(
+                                                        animeId = anime.id,
+                                                        animeTitle = anime.title,
+                                                        episodeNumber = epNum,
+                                                        episodeTitle = "Episódio $epNum",
+                                                        imageUrl = anime.imageUrl.ifEmpty { anime.largeImageUrl }
+                                                    )
+                                                }
+                                            ) {
+                                                Icon(
+                                                    imageVector = if (isEpFav) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                                    contentDescription = "Amei este episódio",
+                                                    tint = if (isEpFav) Color(0xFFFF4081) else MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
 

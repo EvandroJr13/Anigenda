@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import agenda.de.myapplicationanim1.ui.details.DetailsScreen
+import agenda.de.myapplicationanim1.ui.favorites.FavoritesScreen
 import agenda.de.myapplicationanim1.ui.navigation.AppScreen
 import agenda.de.myapplicationanim1.ui.navigation.BottomNavItem
 import agenda.de.myapplicationanim1.ui.popular.PopularScreen
@@ -49,12 +50,14 @@ fun MainApp(
         is AppScreen.Schedule -> BottomNavItem.SCHEDULE
         is AppScreen.Popular -> BottomNavItem.POPULAR
         is AppScreen.Search -> BottomNavItem.SEARCH
+        is AppScreen.Favorites -> BottomNavItem.FAVORITES
         is AppScreen.Settings -> BottomNavItem.SETTINGS
         is AppScreen.Details -> {
             val previousTabScreen = backStack.findLast { it !is AppScreen.Details }
             when (previousTabScreen) {
                 is AppScreen.Popular -> BottomNavItem.POPULAR
                 is AppScreen.Search -> BottomNavItem.SEARCH
+                is AppScreen.Favorites -> BottomNavItem.FAVORITES
                 is AppScreen.Settings -> BottomNavItem.SETTINGS
                 else -> BottomNavItem.SCHEDULE
             }
@@ -86,6 +89,7 @@ fun MainApp(
                                         BottomNavItem.SCHEDULE -> AppScreen.Schedule
                                         BottomNavItem.POPULAR -> AppScreen.Popular
                                         BottomNavItem.SEARCH -> AppScreen.Search
+                                        BottomNavItem.FAVORITES -> AppScreen.Favorites
                                         BottomNavItem.SETTINGS -> AppScreen.Settings
                                     }
                                     if (currentScreen != targetScreen) {
@@ -138,6 +142,13 @@ fun MainApp(
                         SearchScreen(
                             onAnimeClick = { anime ->
                                 backStack.add(AppScreen.Details(anime.id))
+                            }
+                        )
+                    }
+                    is AppScreen.Favorites -> {
+                        FavoritesScreen(
+                            onAnimeClick = { animeId ->
+                                backStack.add(AppScreen.Details(animeId))
                             }
                         )
                     }
