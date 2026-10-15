@@ -31,6 +31,7 @@ import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.runtime.rememberCoroutineScope
+import agenda.de.myapplicationanim1.update.UpdateCheckResult
 import agenda.de.myapplicationanim1.update.UpdateDialog
 import agenda.de.myapplicationanim1.update.UpdateInfo
 import agenda.de.myapplicationanim1.update.UpdateManager
@@ -236,17 +237,27 @@ fun SettingsScreen(
                                     isChecking = true
                                     scope.launch {
                                         val manager = UpdateManager(context, "EvandroJr13", "Anime_Schedule")
-                                        val info = manager.checkForUpdate()
+                                        val result = manager.checkForUpdate()
                                         isChecking = false
-                                        if (info != null) {
-                                            updateInfo = info
-                                            showUpdateDialog = true
-                                        } else {
-                                            Toast.makeText(
-                                                context,
-                                                "Seu aplicativo já está na versão mais recente!",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
+                                        when (result) {
+                                            is UpdateCheckResult.NewUpdate -> {
+                                                updateInfo = result.info
+                                                showUpdateDialog = true
+                                            }
+                                            is UpdateCheckResult.AlreadyLatest -> {
+                                                Toast.makeText(
+                                                    context,
+                                                    "Seu aplicativo já está na versão mais recente!",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                            is UpdateCheckResult.Error -> {
+                                                Toast.makeText(
+                                                    context,
+                                                    result.message,
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                            }
                                         }
                                     }
                                 }

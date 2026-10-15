@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.Retrofit
@@ -15,20 +17,32 @@ data class UpdateInfo(
     val apkUrl: String
 )
 
+sealed interface UpdateCheckResult {
+    data class NewUpdate(val info: UpdateInfo) : UpdateCheckResult
+    object AlreadyLatest : UpdateCheckResult
+    data class Error(val message: String) : UpdateCheckResult
+}
+
 class UpdateManager(
     private val context: Context,
     private val repoOwner: String,
     private val repoName: String
 ) {
+    private val moshi: Moshi by lazy {
+        Moshi.Builder()
+            .addLast(KotlinJsonAdapterFactory())
+            .build()
+    }
+
     private val api: GithubReleaseApi by lazy {
         Retrofit.Builder()
             .baseUrl("https://api.github.com/")
-            .addConverterFactory(MoshiConverterFactory.create())
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(GithubReleaseApi::class.java)
     }
 
-    suspend fun checkForUpdate(): UpdateInfo? = withContext(Dispatchers.IO) {
+    suspend fun checkForUpdate(): UpdateCheckResult = withContext(Dispatchers.IO) {
         try {
             val release = api.getLatestRelease(repoOwner, repoName)
             val remoteTag = release.tagName.removePrefix("v").trim()
@@ -42,16 +56,29 @@ class UpdateManager(
                     ?: release.htmlUrl 
                     ?: "https://github.com/$repoOwner/$repoName/releases/latest"
 
-                return@withContext UpdateInfo(
-                    versionName = release.tagName,
-                    releaseNotes = release.body,
-                    apkUrl = downloadUrl
+                return@withContext UpdateCheckResult.NewUpdate(
+                    UpdateInfo(
+                        versionName = release.tagName,
+                        releaseNotes = release.body,
+                        apkUrl = downloadUrl
+                    )
                 )
+            } else {
+                return@withContext UpdateCheckResult.AlreadyLatest
             }
+        } catch (e: retrofit2.HttpException) {
+            val msg = when (e.code()) {
+                404 -> "Repositório ou release não encontrada no GitHub (verifique se o repositório é público)."
+                403 -> "Limite de requisições do GitHub atingido ou acesso negado."
+                else -> "Erro HTTP ${e.code()}: ${e.message()}"
+            }
+            Log.e("UpdateManager", msg, e)
+            return@withContext UpdateCheckResult.Error(msg)
         } catch (e: Exception) {
-            Log.e("UpdateManager", "Error checking for updates from GitHub", e)
+            val msg = "Falha ao verificar atualização: ${e.localizedMessage ?: e.message}"
+            Log.e("UpdateManager", msg, e)
+            return@withContext UpdateCheckResult.Error(msg)
         }
-        return@withContext null
     }
 
     private fun getAppVersionName(): String {
