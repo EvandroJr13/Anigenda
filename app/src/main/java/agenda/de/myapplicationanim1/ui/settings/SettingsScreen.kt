@@ -327,12 +327,21 @@ fun SettingsScreen(
                         Button(
                             onClick = {
                                 try {
-                                    com.google.firebase.appdistribution.FirebaseAppDistribution.getInstance()
-                                        .startFeedback("Feedback do Anime Schedule")
+                                    val appDist = com.google.firebase.appdistribution.FirebaseAppDistribution.getInstance()
+                                    if (!appDist.isTesterSignedIn) {
+                                        Toast.makeText(context, "Iniciando login de testador do Firebase...", Toast.LENGTH_SHORT).show()
+                                        appDist.signInTester().addOnSuccessListener {
+                                            appDist.startFeedback("Feedback do Anime Schedule")
+                                        }.addOnFailureListener { e ->
+                                            Toast.makeText(context, "Erro ao autenticar testador: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                                        }
+                                    } else {
+                                        appDist.startFeedback("Feedback do Anime Schedule")
+                                    }
                                 } catch (e: Exception) {
                                     Toast.makeText(
                                         context,
-                                        "Disponível para testadores no Firebase App Distribution.",
+                                        "Erro no Firebase Feedback: ${e.localizedMessage}",
                                         Toast.LENGTH_LONG
                                     ).show()
                                 }

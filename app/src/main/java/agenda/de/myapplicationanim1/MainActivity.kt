@@ -22,10 +22,15 @@ class MainActivity : ComponentActivity() {
         CacheCleanupWorker.scheduleDailyCleanup(applicationContext)
 
         try {
-            FirebaseAppDistribution.getInstance().showFeedbackNotification(
-                "Toque para enviar seu feedback do Anime Schedule",
-                InterruptionLevel.HIGH
-            )
+            val appDist = FirebaseAppDistribution.getInstance()
+            if (!appDist.isTesterSignedIn) {
+                appDist.signInTester()
+            } else {
+                appDist.showFeedbackNotification(
+                    "Toque para enviar seu feedback do Anime Schedule",
+                    InterruptionLevel.HIGH
+                )
+            }
         } catch (e: Exception) {
             Log.d("FirebaseAppDist", "In-app feedback notification info: ${e.message}")
         }
