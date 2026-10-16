@@ -13,9 +13,9 @@ android {
     defaultConfig {
         applicationId = "agenda.de.myapplicationanim1"
         minSdk = 29
-        targetSdk = 35
-        versionCode = 30
-        versionName = "3.0"
+        targetSdk = 32
+        versionCode = 31
+        versionName = "3.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -83,6 +83,9 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.retrofit)
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
+    implementation("com.google.firebase:firebase-appdistribution-api-ktx:16.0.0-beta15")
+    implementation("com.google.firebase:firebase-appdistribution:16.0.0-beta18")
+    // ADD the API-only library to all variants
     implementation("com.google.firebase:firebase-appdistribution-api-ktx:16.0.0-beta15")
     implementation("com.google.firebase:firebase-appdistribution:16.0.0-beta21")
 }
