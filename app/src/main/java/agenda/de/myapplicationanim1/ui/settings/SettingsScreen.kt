@@ -33,6 +33,8 @@ import androidx.compose.material3.Card
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.material.icons.rounded.Feedback
 import agenda.de.myapplicationanim1.data.util.BackupManager
+import com.google.firebase.Firebase
+import com.google.firebase.appdistribution.appDistribution
 import agenda.de.myapplicationanim1.update.UpdateCheckResult
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material3.OutlinedButton
@@ -327,8 +329,7 @@ fun SettingsScreen(
                         Button(
                             onClick = {
                                 try {
-                                    val appDist = com.google.firebase.appdistribution.FirebaseAppDistribution.getInstance()
-                                    appDist.startFeedback("Feedback do Anime Schedule")
+                                    Firebase.appDistribution.startFeedback("Feedback do Anime Schedule")
                                     Toast.makeText(context, "Abrindo tela de feedback...", Toast.LENGTH_SHORT).show()
                                 } catch (e: Exception) {
                                     Toast.makeText(

@@ -10,9 +10,8 @@ import agenda.de.myapplicationanim1.data.remote.RetrofitClient
 import agenda.de.myapplicationanim1.data.util.CacheCleanupWorker
 import agenda.de.myapplicationanim1.ui.MainApp
 import agenda.de.myapplicationanim1.ui.theme.AgendaDeAnimesTheme
-import com.google.firebase.Firebase
+import com.google.firebase.appdistribution.FirebaseAppDistribution
 import com.google.firebase.appdistribution.InterruptionLevel
-import com.google.firebase.appdistribution.appDistribution
 
 class MainActivity : ComponentActivity() {
 
@@ -21,15 +20,6 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         RetrofitClient.init(applicationContext)
         CacheCleanupWorker.scheduleDailyCleanup(applicationContext)
-
-        try {
-            Firebase.appDistribution.showFeedbackNotification(
-                R.string.additionalFormText,
-                InterruptionLevel.HIGH
-            )
-        } catch (e: Exception) {
-            Log.d("FirebaseAppDist", "Feedback notification info: ${e.message}")
-        }
 
         val animeIdFromIntent = getAnimeIdFromIntent(intent)
         setContent {
