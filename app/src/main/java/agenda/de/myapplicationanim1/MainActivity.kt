@@ -21,20 +21,6 @@ class MainActivity : ComponentActivity() {
         RetrofitClient.init(applicationContext)
         CacheCleanupWorker.scheduleDailyCleanup(applicationContext)
 
-        try {
-            val appDist = FirebaseAppDistribution.getInstance()
-            if (!appDist.isTesterSignedIn) {
-                appDist.signInTester()
-            } else {
-                appDist.showFeedbackNotification(
-                    "Toque para enviar seu feedback do Anime Schedule",
-                    InterruptionLevel.HIGH
-                )
-            }
-        } catch (e: Exception) {
-            Log.d("FirebaseAppDist", "In-app feedback notification info: ${e.message}")
-        }
-
         val animeIdFromIntent = getAnimeIdFromIntent(intent)
         setContent {
             AgendaDeAnimesTheme {
