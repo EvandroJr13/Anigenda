@@ -31,6 +31,7 @@ import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material.icons.rounded.Feedback
 import agenda.de.myapplicationanim1.data.util.BackupManager
 import agenda.de.myapplicationanim1.update.UpdateCheckResult
 import androidx.compose.material.icons.rounded.Storage
@@ -282,6 +283,64 @@ fun SettingsScreen(
                             manager.downloadAndInstall(updateInfo!!.apkUrl)
                         }
                     )
+                }
+            }
+
+            // Firebase Tester Feedback Button
+            item {
+                val context = LocalContext.current
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    )
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Feedback,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Feedback do Testador",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Enviar captura de tela e sugestão no Firebase",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                try {
+                                    com.google.firebase.appdistribution.FirebaseAppDistribution.getInstance()
+                                        .startFeedback("Feedback do Anime Schedule")
+                                } catch (e: Exception) {
+                                    Toast.makeText(
+                                        context,
+                                        "Disponível para testadores no Firebase App Distribution.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                        ) {
+                            Text("Enviar")
+                        }
+                    }
                 }
             }
 
