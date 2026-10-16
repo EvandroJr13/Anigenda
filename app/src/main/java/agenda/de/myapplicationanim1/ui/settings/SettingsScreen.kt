@@ -337,19 +337,19 @@ fun SettingsScreen(
                                 try {
                                     val appDist = Firebase.appDistribution
                                     if (!appDist.isTesterSignedIn) {
-                                        Toast.makeText(context, "Conectando ao Firebase App Distribution...", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "Autenticando no Firebase App Distribution...", Toast.LENGTH_SHORT).show()
                                         appDist.signInTester()
                                             .addOnSuccessListener(OnSuccessListener {
-                                                appDist.startFeedback("Feedback do Anigenda")
+                                                appDist.startFeedback(R.string.additionalFormText)
                                             })
                                             .addOnFailureListener(OnFailureListener { e ->
-                                                Toast.makeText(context, "Erro ao autenticar testador: ${e.localizedMessage ?: e.message}", Toast.LENGTH_LONG).show()
+                                                Toast.makeText(context, "Erro no teste: ${e.localizedMessage ?: e.message}", Toast.LENGTH_LONG).show()
                                             })
                                     } else {
-                                        appDist.startFeedback("Feedback do Anigenda")
+                                        appDist.startFeedback(R.string.additionalFormText)
                                     }
                                 } catch (e: Exception) {
-                                    Toast.makeText(context, "Erro no Firebase: ${e.localizedMessage ?: e.message}", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, "Erro: ${e.localizedMessage ?: e.message}", Toast.LENGTH_LONG).show()
                                 }
                             }
                         ) {

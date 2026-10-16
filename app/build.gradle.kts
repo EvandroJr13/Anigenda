@@ -14,8 +14,8 @@ android {
         applicationId = "agenda.de.myapplicationanim1"
         minSdk = 29
         targetSdk = 35
-        versionCode = 27
-        versionName = "2.7"
+        versionCode = 30
+        versionName = "3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
