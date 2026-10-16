@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.devtools.ksp)
     alias(libs.plugins.jetbrains.kotlin.plugin.serialization)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -13,8 +14,8 @@ android {
         applicationId = "agenda.de.myapplicationanim1"
         minSdk = 29
         targetSdk = 35
-        versionCode = 16
-        versionName = "1.9.2"
+        versionCode = 20
+        versionName = "2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -24,11 +25,23 @@ android {
         abortOnError = false
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("keystore.jks")
+            storePassword = "animeschedule123"
+            keyAlias = "animeschedule"
+            keyPassword = "animeschedule123"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("release")
+        }
         release {
             isMinifyEnabled = false
             isShrinkResources = false
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt")
             )
