@@ -14,8 +14,8 @@ android {
         applicationId = "agenda.de.myapplicationanim1"
         minSdk = 29
         targetSdk = 35
-        versionCode = 22
-        versionName = "2.2"
+        versionCode = 23
+        versionName = "2.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -84,6 +84,6 @@ dependencies {
     implementation(libs.retrofit)
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-appdistribution-api-ktx:16.0.0-beta15")
-    implementation("com.google.firebase:firebase-appdistribution:16.0.0-beta18")
+    implementation("com.google.firebase:firebase-appdistribution:16.0.0-beta21")
 }
 
