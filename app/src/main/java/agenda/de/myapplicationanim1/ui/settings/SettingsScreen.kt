@@ -35,6 +35,8 @@ import androidx.compose.material.icons.rounded.Feedback
 import agenda.de.myapplicationanim1.data.util.BackupManager
 import com.google.firebase.Firebase
 import com.google.firebase.appdistribution.appDistribution
+import com.google.android.gms.tasks.OnFailureListener
+import com.google.android.gms.tasks.OnSuccessListener
 import agenda.de.myapplicationanim1.update.UpdateCheckResult
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material3.OutlinedButton
@@ -329,8 +331,23 @@ fun SettingsScreen(
                         Button(
                             onClick = {
                                 try {
-                                    Firebase.appDistribution.startFeedback("Feedback do Anime Schedule")
-                                    Toast.makeText(context, "Abrindo tela de feedback...", Toast.LENGTH_SHORT).show()
+                                    val appDist = Firebase.appDistribution
+                                    if (!appDist.isTesterSignedIn) {
+                                        Toast.makeText(context, "Conectando ao Firebase App Distribution...", Toast.LENGTH_SHORT).show()
+                                        appDist.signInTester()
+                                            .addOnSuccessListener(OnSuccessListener {
+                                                appDist.startFeedback("Feedback do Anime Schedule")
+                                            })
+                                            .addOnFailureListener(OnFailureListener { e ->
+                                                Toast.makeText(
+                                                    context,
+                                                    "Erro ao autenticar testador: ${e.localizedMessage ?: e.message}",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                            })
+                                    } else {
+                                        appDist.startFeedback("Feedback do Anime Schedule")
+                                    }
                                 } catch (e: Exception) {
                                     Toast.makeText(
                                         context,
