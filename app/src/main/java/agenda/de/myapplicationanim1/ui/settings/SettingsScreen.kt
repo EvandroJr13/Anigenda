@@ -328,20 +328,12 @@ fun SettingsScreen(
                             onClick = {
                                 try {
                                     val appDist = com.google.firebase.appdistribution.FirebaseAppDistribution.getInstance()
-                                    if (!appDist.isTesterSignedIn) {
-                                        Toast.makeText(context, "Iniciando login de testador do Firebase...", Toast.LENGTH_SHORT).show()
-                                        appDist.signInTester().addOnSuccessListener {
-                                            appDist.startFeedback("Feedback do Anime Schedule")
-                                        }.addOnFailureListener { e ->
-                                            Toast.makeText(context, "Erro ao autenticar testador: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
-                                        }
-                                    } else {
-                                        appDist.startFeedback("Feedback do Anime Schedule")
-                                    }
+                                    appDist.startFeedback("Feedback do Anime Schedule")
+                                    Toast.makeText(context, "Abrindo tela de feedback...", Toast.LENGTH_SHORT).show()
                                 } catch (e: Exception) {
                                     Toast.makeText(
                                         context,
-                                        "Erro no Firebase Feedback: ${e.localizedMessage}",
+                                        "Erro ao abrir feedback: ${e.localizedMessage ?: e.message}",
                                         Toast.LENGTH_LONG
                                     ).show()
                                 }
