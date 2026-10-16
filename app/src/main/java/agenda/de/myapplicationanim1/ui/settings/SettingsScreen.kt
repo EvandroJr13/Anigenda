@@ -39,7 +39,10 @@ import com.google.android.gms.tasks.OnFailureListener
 import com.google.android.gms.tasks.OnSuccessListener
 import agenda.de.myapplicationanim1.update.UpdateCheckResult
 import androidx.compose.material.icons.rounded.Storage
+import android.content.Context
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
 import agenda.de.myapplicationanim1.update.UpdateDialog
 import agenda.de.myapplicationanim1.update.UpdateInfo
 import agenda.de.myapplicationanim1.update.UpdateManager
@@ -96,6 +99,7 @@ fun SettingsScreen(
     var customHexInput by remember(viewModel?.backgroundColorHex) {
         mutableStateOf(viewModel?.backgroundColorHex ?: "#0B0E14")
     }
+    var showNativeFeedbackDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -290,7 +294,7 @@ fun SettingsScreen(
                 }
             }
 
-            // Firebase Tester Feedback Button
+            // Firebase / Native Tester Feedback Button
             item {
                 val context = LocalContext.current
 
@@ -322,7 +326,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Enviar captura de tela e sugestão no Firebase",
+                                text = "Enviar sugestão ou relato de bug do aplicativo",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -330,31 +334,13 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(
                             onClick = {
+                                showNativeFeedbackDialog = true
                                 try {
                                     val appDist = Firebase.appDistribution
-                                    if (!appDist.isTesterSignedIn) {
-                                        Toast.makeText(context, "Conectando ao Firebase App Distribution...", Toast.LENGTH_SHORT).show()
-                                        appDist.signInTester()
-                                            .addOnSuccessListener(OnSuccessListener {
-                                                appDist.startFeedback("Feedback do Anime Schedule")
-                                            })
-                                            .addOnFailureListener(OnFailureListener { e ->
-                                                Toast.makeText(
-                                                    context,
-                                                    "Erro ao autenticar testador: ${e.localizedMessage ?: e.message}",
-                                                    Toast.LENGTH_LONG
-                                                ).show()
-                                            })
-                                    } else {
+                                    if (appDist.isTesterSignedIn) {
                                         appDist.startFeedback("Feedback do Anime Schedule")
                                     }
-                                } catch (e: Exception) {
-                                    Toast.makeText(
-                                        context,
-                                        "Erro ao abrir feedback: ${e.localizedMessage ?: e.message}",
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                }
+                                } catch (_: Exception) {}
                             }
                         ) {
                             Text("Enviar")
@@ -363,77 +349,7 @@ fun SettingsScreen(
                 }
             }
 
-            // Backup & Restore Data
-            item {
-                val context = LocalContext.current
-                val backupManager = remember { BackupManager(context) }
-                val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
 
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Rounded.Storage,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = "Backup e Restauração de Dados",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Exporte ou importe seus animes e episódios favoritos para nunca perder seus dados.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Button(
-                                onClick = {
-                                    val json = backupManager.exportBackupJson()
-                                    clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(json))
-                                    Toast.makeText(context, "Backup copiado para a área de transferência!", Toast.LENGTH_LONG).show()
-                                },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Exportar Backup")
-                            }
-                            OutlinedButton(
-                                onClick = {
-                                    val clip = clipboardManager.getText()?.text
-                                    if (!clip.isNullOrBlank()) {
-                                        val success = backupManager.importBackupJson(clip)
-                                        if (success) {
-                                            Toast.makeText(context, "Backup restaurado com sucesso!", Toast.LENGTH_LONG).show()
-                                        } else {
-                                            Toast.makeText(context, "Erro: texto de backup inválido.", Toast.LENGTH_LONG).show()
-                                        }
-                                    } else {
-                                        Toast.makeText(context, "Área de transferência vazia.", Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Restaurar Backup")
-                            }
-                        }
-                    }
-                }
-            }
 
             // 2. Modo do Tema (Sistema / Dark / Light)
             item {
@@ -815,6 +731,65 @@ fun SettingsScreen(
             item {
                 ApiSourceFooter(text = "Dados fornecidos por: AniList API")
             }
+        }
+
+        if (showNativeFeedbackDialog) {
+            val context = LocalContext.current
+            var feedbackInputText by remember { mutableStateOf("") }
+
+            AlertDialog(
+                onDismissRequest = { showNativeFeedbackDialog = false },
+                title = { Text("Enviar Feedback do Testador") },
+                text = {
+                    Column {
+                        Text(
+                            text = "Escreva abaixo suas sugestões, críticas ou relatos de bugs do aplicativo:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = feedbackInputText,
+                            onValueChange = { feedbackInputText = it },
+                            label = { Text("Seu feedback...") },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 3,
+                            maxLines = 5
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (feedbackInputText.isNotBlank()) {
+                                showNativeFeedbackDialog = false
+                                try {
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+                                        data = android.net.Uri.parse("mailto:")
+                                        putExtra(android.content.Intent.EXTRA_SUBJECT, "Feedback Anime Schedule")
+                                        putExtra(android.content.Intent.EXTRA_TEXT, feedbackInputText)
+                                    }
+                                    context.startActivity(android.content.Intent.createChooser(intent, "Enviar por E-mail"))
+                                } catch (_: Exception) {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                    val clip = android.content.ClipData.newPlainText("Feedback", feedbackInputText)
+                                    clipboard.setPrimaryClip(clip)
+                                    Toast.makeText(context, "Feedback copiado para a área de transferência!", Toast.LENGTH_LONG).show()
+                                }
+                            } else {
+                                Toast.makeText(context, "Escreva uma mensagem antes de enviar.", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    ) {
+                        Text("Enviar por E-mail / Copiar")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showNativeFeedbackDialog = false }) {
+                        Text("Cancelar")
+                    }
+                }
+            )
         }
     }
 }
