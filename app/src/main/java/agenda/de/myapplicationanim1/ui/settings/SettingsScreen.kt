@@ -319,14 +319,14 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Feedback do Testador",
+                                text = "Enviar feedback Firebase",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Enviar sugestão ou relato de bug do aplicativo",
+                                text = "Enviar captura de tela e feedback diretamente ao projeto no Firebase",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -334,16 +334,26 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(
                             onClick = {
-                                showNativeFeedbackDialog = true
                                 try {
                                     val appDist = Firebase.appDistribution
-                                    if (appDist.isTesterSignedIn) {
-                                        appDist.startFeedback("Feedback do Anime Schedule")
+                                    if (!appDist.isTesterSignedIn) {
+                                        Toast.makeText(context, "Conectando ao Firebase App Distribution...", Toast.LENGTH_SHORT).show()
+                                        appDist.signInTester()
+                                            .addOnSuccessListener(OnSuccessListener {
+                                                appDist.startFeedback("Feedback do Anigenda")
+                                            })
+                                            .addOnFailureListener(OnFailureListener { e ->
+                                                Toast.makeText(context, "Erro ao autenticar testador: ${e.localizedMessage ?: e.message}", Toast.LENGTH_LONG).show()
+                                            })
+                                    } else {
+                                        appDist.startFeedback("Feedback do Anigenda")
                                     }
-                                } catch (_: Exception) {}
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Erro no Firebase: ${e.localizedMessage ?: e.message}", Toast.LENGTH_LONG).show()
+                                }
                             }
                         ) {
-                            Text("Enviar")
+                            Text("Enviar feedback Firebase")
                         }
                     }
                 }
