@@ -88,5 +88,10 @@ dependencies {
     implementation("com.google.firebase:firebase-crashlytics")
     implementation("com.google.firebase:firebase-appdistribution-api-ktx:16.0.0-beta15")
     implementation("com.google.firebase:firebase-appdistribution:16.0.0-beta21")
+
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
 }
 
