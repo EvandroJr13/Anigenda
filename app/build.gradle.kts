@@ -14,7 +14,7 @@ android {
     defaultConfig {
         applicationId = "agenda.de.myapplicationanim1"
         minSdk = 29
-        targetSdk = 32
+        targetSdk = 35
         versionCode = 35
         versionName = "3.5"
 
