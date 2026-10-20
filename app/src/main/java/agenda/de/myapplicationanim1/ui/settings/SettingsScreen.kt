@@ -96,6 +96,13 @@ fun SettingsScreen(
     onAnimeClick: (Int) -> Unit = {}
 ) {
     val permissionState = rememberNotificationPermissionState()
+    val context = LocalContext.current
+    var themeUnlocked by remember {
+        mutableStateOf(
+            context.getSharedPreferences("theme_ad_prefs", Context.MODE_PRIVATE)
+                .getBoolean("unlocked", false)
+        )
+    }
     val notifiedAnimes by (viewModel?.notifiedAnimes?.collectAsState() ?: remember { mutableStateOf(emptyList()) })
     var customHexInput by remember(viewModel?.backgroundColorHex) {
         mutableStateOf(viewModel?.backgroundColorHex ?: "#0B0E14")
@@ -295,7 +302,7 @@ fun SettingsScreen(
                 }
             }
 
-            // Firebase / Native Tester Feedback Button
+            // Email Feedback Button
             item {
                 val context = LocalContext.current
 
@@ -320,14 +327,14 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Enviar feedback Firebase",
+                                text = "Enviar Feedback por E-mail",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Enviar captura de tela e feedback diretamente ao projeto no Firebase",
+                                text = "Envie sugestões ou relatos para evandro.asjunior13@gmail.com",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -336,29 +343,18 @@ fun SettingsScreen(
                         Button(
                             onClick = {
                                 try {
-                                    val appDist = Firebase.appDistribution
-                                    if (!appDist.isTesterSignedIn) {
-                                        Toast.makeText(context, "Autenticando no Firebase App Distribution...", Toast.LENGTH_SHORT).show()
-                                        appDist.signInTester()
-                                            .addOnSuccessListener(OnSuccessListener {
-                                                try {
-                                                    appDist.startFeedback(R.string.additionalFormText)
-                                                } catch (_: Exception) {
-                                                    showNativeFeedbackDialog = true
-                                                }
-                                            })
-                                            .addOnFailureListener(OnFailureListener {
-                                                showNativeFeedbackDialog = true
-                                            })
-                                    } else {
-                                        appDist.startFeedback(R.string.additionalFormText)
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+                                        data = android.net.Uri.parse("mailto:evandro.asjunior13@gmail.com")
+                                        putExtra(android.content.Intent.EXTRA_SUBJECT, "Feedback Anime Schedule")
+                                        putExtra(android.content.Intent.EXTRA_TEXT, "Olá Evandro,\n\nFeedback sobre o app Anime Schedule:\n")
                                     }
+                                    context.startActivity(android.content.Intent.createChooser(intent, "Enviar E-mail"))
                                 } catch (_: Exception) {
                                     showNativeFeedbackDialog = true
                                 }
                             }
                         ) {
-                            Text("Enviar feedback Firebase")
+                            Text("Enviar E-mail")
                         }
                     }
                 }
@@ -452,54 +448,58 @@ fun SettingsScreen(
 
             // Rewarded Ad block to unlock/support theme change
             item {
-                val context = LocalContext.current
                 var isAdLoading by remember { mutableStateOf(false) }
-                var themeUnlocked by remember { 
-                    mutableStateOf(
-                        context.getSharedPreferences("theme_ad_prefs", android.content.Context.MODE_PRIVATE)
-                            .getBoolean("unlocked", false)
+
+                fun loadRewardedAd(useTestId: Boolean = false) {
+                    isAdLoading = true
+                    Toast.makeText(context, "Carregando anúncio premiado...", Toast.LENGTH_SHORT).show()
+                    val adUnitIdToUse = if (useTestId) "ca-app-pub-3940256099942544/5224354917" else "ca-app-pub-9672048369965769/1840427717"
+                    val adRequest = com.google.android.gms.ads.AdRequest.Builder().build()
+                    com.google.android.gms.ads.rewarded.RewardedAd.load(
+                        context,
+                        adUnitIdToUse,
+                        adRequest,
+                        object : com.google.android.gms.ads.rewarded.RewardedAdLoadCallback() {
+                            override fun onAdLoaded(ad: com.google.android.gms.ads.rewarded.RewardedAd) {
+                                isAdLoading = false
+                                val activity = context as? android.app.Activity ?: run {
+                                    themeUnlocked = true
+                                    context.getSharedPreferences("theme_ad_prefs", Context.MODE_PRIVATE).edit().putBoolean("unlocked", true).apply()
+                                    Toast.makeText(context, "🎉 Tema desbloqueado com sucesso!", Toast.LENGTH_LONG).show()
+                                    return
+                                }
+                                ad.show(activity) { _ ->
+                                    themeUnlocked = true
+                                    context.getSharedPreferences("theme_ad_prefs", Context.MODE_PRIVATE)
+                                        .edit()
+                                        .putBoolean("unlocked", true)
+                                        .apply()
+                                    Toast.makeText(context, "🎉 Parabéns! Anúncio assistido e temas desbloqueados!", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                            override fun onAdFailedToLoad(error: com.google.android.gms.ads.LoadAdError) {
+                                isAdLoading = false
+                                if (!useTestId) {
+                                    // Fallback to Google test rewarded ad unit ID if real ID fails to load
+                                    loadRewardedAd(useTestId = true)
+                                } else {
+                                    // If test ID also fails (e.g. offline), allow unlock as fallback
+                                    themeUnlocked = true
+                                    context.getSharedPreferences("theme_ad_prefs", Context.MODE_PRIVATE)
+                                        .edit()
+                                        .putBoolean("unlocked", true)
+                                        .apply()
+                                    Toast.makeText(context, "🎉 Temas liberados (Modo offline/fallback)!", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }
                     )
                 }
 
                 Card(
                     onClick = {
                         if (!themeUnlocked) {
-                            isAdLoading = true
-                            Toast.makeText(context, "Carregando anúncio premiado...", Toast.LENGTH_SHORT).show()
-                            val adRequest = com.google.android.gms.ads.AdRequest.Builder().build()
-                            com.google.android.gms.ads.rewarded.RewardedAd.load(
-                                context,
-                                "ca-app-pub-9672048369965769/1840427717",
-                                adRequest,
-                                object : com.google.android.gms.ads.rewarded.RewardedAdLoadCallback() {
-                                    override fun onAdLoaded(ad: com.google.android.gms.ads.rewarded.RewardedAd) {
-                                        isAdLoading = false
-                                        val activity = context as? android.app.Activity ?: run {
-                                            themeUnlocked = true
-                                            Toast.makeText(context, "🎉 Tema liberado!", Toast.LENGTH_LONG).show()
-                                            return
-                                        }
-                                        ad.show(activity) { _ ->
-                                            themeUnlocked = true
-                                            context.getSharedPreferences("theme_ad_prefs", android.content.Context.MODE_PRIVATE)
-                                                .edit()
-                                                .putBoolean("unlocked", true)
-                                                .apply()
-                                            Toast.makeText(context, "🎉 Parabéns! Anúncio assistido e tema desbloqueado!", Toast.LENGTH_LONG).show()
-                                        }
-                                    }
-                                    override fun onAdFailedToLoad(error: com.google.android.gms.ads.LoadAdError) {
-                                        isAdLoading = false
-                                        // Fallback for test/offline/debug environment
-                                        themeUnlocked = true
-                                        context.getSharedPreferences("theme_ad_prefs", android.content.Context.MODE_PRIVATE)
-                                            .edit()
-                                            .putBoolean("unlocked", true)
-                                            .apply()
-                                        Toast.makeText(context, "🎉 Tema liberado com sucesso!", Toast.LENGTH_LONG).show()
-                                    }
-                                }
-                            )
+                            loadRewardedAd(false)
                         } else {
                             Toast.makeText(context, "Temas já desbloqueados e liberados!", Toast.LENGTH_SHORT).show()
                         }
@@ -554,7 +554,11 @@ fun SettingsScreen(
                 val selected = mode == activeTheme
                 Card(
                     onClick = {
-                        viewModel?.updateThemeMode(mode) ?: onThemeSelected(mode)
+                        if (themeUnlocked) {
+                            viewModel?.updateThemeMode(mode) ?: onThemeSelected(mode)
+                        } else {
+                            Toast.makeText(context, "🔒 Assista ao anúncio premiado acima para desbloquear e trocar de tema!", Toast.LENGTH_LONG).show()
+                        }
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -571,7 +575,11 @@ fun SettingsScreen(
                         RadioButton(
                             selected = selected,
                             onClick = {
-                                viewModel?.updateThemeMode(mode) ?: onThemeSelected(mode)
+                                if (themeUnlocked) {
+                                    viewModel?.updateThemeMode(mode) ?: onThemeSelected(mode)
+                                } else {
+                                    Toast.makeText(context, "🔒 Assista ao anúncio premiado acima para desbloquear e trocar de tema!", Toast.LENGTH_LONG).show()
+                                }
                             }
                         )
                         Spacer(modifier = Modifier.width(12.dp))
