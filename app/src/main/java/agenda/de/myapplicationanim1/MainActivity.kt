@@ -11,6 +11,8 @@ import agenda.de.myapplicationanim1.data.util.CacheCleanupWorker
 import agenda.de.myapplicationanim1.ui.MainApp
 import agenda.de.myapplicationanim1.ui.theme.AgendaDeAnimesTheme
 import com.google.firebase.Firebase
+import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
 import com.google.firebase.appdistribution.InterruptionLevel
 import com.google.firebase.appdistribution.appDistribution
 
@@ -21,6 +23,20 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         RetrofitClient.init(applicationContext)
         CacheCleanupWorker.scheduleDailyCleanup(applicationContext)
+
+        try {
+            if (FirebaseApp.getApps(applicationContext).isEmpty()) {
+                val options = FirebaseOptions.Builder()
+                    .setApplicationId("1:385376252110:android:419e87b5776a08ca8d209f")
+                    .setApiKey("AIzaSyD1svDwv8VQoT_Z5ZoVY0Rs0E-zufx4r-4")
+                    .setProjectId("anigenda-dcb9f")
+                    .build()
+
+                FirebaseApp.initializeApp(applicationContext, options)
+            }
+        } catch (e: Exception) {
+            Log.d("FirebaseInit", "Manual Firebase initialization info: ${e.message}")
+        }
 
         try {
             Firebase.appDistribution.showFeedbackNotification(
