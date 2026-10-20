@@ -25,6 +25,12 @@ class MainActivity : ComponentActivity() {
         CacheCleanupWorker.scheduleDailyCleanup(applicationContext)
 
         try {
+            com.google.android.gms.ads.MobileAds.initialize(this) {}
+        } catch (e: Exception) {
+            Log.d("AdMobInit", "Error initializing MobileAds: ${e.message}")
+        }
+
+        try {
             if (FirebaseApp.getApps(applicationContext).isEmpty()) {
                 val options = FirebaseOptions.Builder()
                     .setApplicationId("1:385376252110:android:419e87b5776a08ca8d209f")

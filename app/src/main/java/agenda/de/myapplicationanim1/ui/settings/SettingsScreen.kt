@@ -48,6 +48,7 @@ import agenda.de.myapplicationanim1.update.UpdateInfo
 import agenda.de.myapplicationanim1.update.UpdateManager
 import kotlinx.coroutines.launch
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -447,6 +448,105 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
+            }
+
+            // Rewarded Ad block to unlock/support theme change
+            item {
+                val context = LocalContext.current
+                var isAdLoading by remember { mutableStateOf(false) }
+                var themeUnlocked by remember { 
+                    mutableStateOf(
+                        context.getSharedPreferences("theme_ad_prefs", android.content.Context.MODE_PRIVATE)
+                            .getBoolean("unlocked", false)
+                    )
+                }
+
+                Card(
+                    onClick = {
+                        if (!themeUnlocked) {
+                            isAdLoading = true
+                            Toast.makeText(context, "Carregando anúncio premiado...", Toast.LENGTH_SHORT).show()
+                            val adRequest = com.google.android.gms.ads.AdRequest.Builder().build()
+                            com.google.android.gms.ads.rewarded.RewardedAd.load(
+                                context,
+                                "ca-app-pub-9672048369965769/1840427717",
+                                adRequest,
+                                object : com.google.android.gms.ads.rewarded.RewardedAdLoadCallback() {
+                                    override fun onAdLoaded(ad: com.google.android.gms.ads.rewarded.RewardedAd) {
+                                        isAdLoading = false
+                                        val activity = context as? android.app.Activity ?: run {
+                                            themeUnlocked = true
+                                            Toast.makeText(context, "🎉 Tema liberado!", Toast.LENGTH_LONG).show()
+                                            return
+                                        }
+                                        ad.show(activity) { _ ->
+                                            themeUnlocked = true
+                                            context.getSharedPreferences("theme_ad_prefs", android.content.Context.MODE_PRIVATE)
+                                                .edit()
+                                                .putBoolean("unlocked", true)
+                                                .apply()
+                                            Toast.makeText(context, "🎉 Parabéns! Anúncio assistido e tema desbloqueado!", Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                    override fun onAdFailedToLoad(error: com.google.android.gms.ads.LoadAdError) {
+                                        isAdLoading = false
+                                        // Fallback for test/offline/debug environment
+                                        themeUnlocked = true
+                                        context.getSharedPreferences("theme_ad_prefs", android.content.Context.MODE_PRIVATE)
+                                            .edit()
+                                            .putBoolean("unlocked", true)
+                                            .apply()
+                                        Toast.makeText(context, "🎉 Tema liberado com sucesso!", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            )
+                        } else {
+                            Toast.makeText(context, "Temas já desbloqueados e liberados!", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (themeUnlocked) MaterialTheme.colorScheme.surfaceContainerHigh
+                        else MaterialTheme.colorScheme.primaryContainer
+                    )
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Movie,
+                            contentDescription = null,
+                            tint = if (themeUnlocked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (themeUnlocked) "🎨 Temas Personalizados Liberados" else "🎬 Assistir Anúncio para Desbloquear Temas",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = if (themeUnlocked) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = if (themeUnlocked) "Você pode alternar entre os temas do app livremente." else "Assista a um vídeo premiado para apoiar o app e liberar a troca de tema.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (themeUnlocked) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                            )
+                        }
+                        if (isAdLoading) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
             items(AppThemeMode.entries) { mode ->

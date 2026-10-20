@@ -88,6 +88,7 @@ dependencies {
     implementation("com.google.firebase:firebase-crashlytics")
     implementation("com.google.firebase:firebase-appdistribution-api-ktx:16.0.0-beta15")
     implementation("com.google.firebase:firebase-appdistribution:16.0.0-beta21")
+    implementation("com.google.android.gms:play-services-ads:23.6.0")
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
