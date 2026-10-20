@@ -340,16 +340,20 @@ fun SettingsScreen(
                                         Toast.makeText(context, "Autenticando no Firebase App Distribution...", Toast.LENGTH_SHORT).show()
                                         appDist.signInTester()
                                             .addOnSuccessListener(OnSuccessListener {
-                                                appDist.startFeedback(R.string.additionalFormText)
+                                                try {
+                                                    appDist.startFeedback(R.string.additionalFormText)
+                                                } catch (_: Exception) {
+                                                    showNativeFeedbackDialog = true
+                                                }
                                             })
-                                            .addOnFailureListener(OnFailureListener { e ->
-                                                Toast.makeText(context, "Erro no teste: ${e.localizedMessage ?: e.message}", Toast.LENGTH_LONG).show()
+                                            .addOnFailureListener(OnFailureListener {
+                                                showNativeFeedbackDialog = true
                                             })
                                     } else {
                                         appDist.startFeedback(R.string.additionalFormText)
                                     }
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "Erro: ${e.localizedMessage ?: e.message}", Toast.LENGTH_LONG).show()
+                                } catch (_: Exception) {
+                                    showNativeFeedbackDialog = true
                                 }
                             }
                         ) {
