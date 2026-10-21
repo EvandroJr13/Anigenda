@@ -91,6 +91,9 @@ dependencies {
     implementation("com.google.firebase:firebase-appdistribution-api-ktx:16.0.0-beta15")
     implementation("com.google.firebase:firebase-appdistribution:16.0.0-beta21")
     implementation("com.google.android.gms:play-services-ads:23.6.0")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

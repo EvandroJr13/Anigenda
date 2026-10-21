@@ -64,14 +64,14 @@ fun BangumiItemDto.toDomain(): Anime {
     }
 
     val dayOfWeekPt = when {
-        weekDay != null && weekDay in 1..7 -> when (weekDay) {
+        weekDay != null && weekDay in 0..7 -> when (weekDay) {
             1 -> "Segunda"
             2 -> "Terça"
             3 -> "Quarta"
             4 -> "Quinta"
             5 -> "Sexta"
             6 -> "Sábado"
-            7 -> "Domingo"
+            7, 0 -> "Domingo"
             else -> "Segunda"
         }
         else -> parseDayFromBegin(begin) ?: "Segunda"
