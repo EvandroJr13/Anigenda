@@ -48,6 +48,11 @@ class AnimeRepositoryImpl(
                 val items = dataResponse?.items ?: emptyList()
                 var animeList = items
                     .filter { !it.isMatureContent() }
+                    // Require strict English title presence in titleTranslate["en"]
+                    .filter { item ->
+                        val enList = item.titleTranslate?.get("en") ?: item.titleTranslate?.get("en-US")
+                        !enList.isNullOrEmpty() && enList.any { it.isNotBlank() }
+                    }
                     .map { it.toDomain() }
 
                 // Filter by popular streaming platforms in BR/USA if sites are present
@@ -86,6 +91,10 @@ class AnimeRepositoryImpl(
                 val items = dataResponse?.items ?: emptyList()
                 val animeList = items
                     .filter { !it.isMatureContent() }
+                    .filter { item ->
+                        val enList = item.titleTranslate?.get("en") ?: item.titleTranslate?.get("en-US")
+                        !enList.isNullOrEmpty() && enList.any { it.isNotBlank() }
+                    }
                     .map { it.toDomain() }
                     .take(24)
                 emit(Resource.Success(animeList))
@@ -108,6 +117,10 @@ class AnimeRepositoryImpl(
                 val normalizedQuery = query.trim().lowercase()
                 val animeList = items
                     .filter { !it.isMatureContent() }
+                    .filter { item ->
+                        val enList = item.titleTranslate?.get("en") ?: item.titleTranslate?.get("en-US")
+                        !enList.isNullOrEmpty() && enList.any { it.isNotBlank() }
+                    }
                     .map { it.toDomain() }
                     .filter {
                         it.title.lowercase().contains(normalizedQuery) ||
@@ -131,7 +144,12 @@ class AnimeRepositoryImpl(
             if (response.isSuccessful) {
                 val dataResponse = response.body()
                 val items = dataResponse?.items ?: emptyList()
-                val item = items.firstOrNull { it.id?.hashCode() == id || it.toDomain().id == id }
+                val item = items
+                    .filter { item ->
+                        val enList = item.titleTranslate?.get("en") ?: item.titleTranslate?.get("en-US")
+                        !enList.isNullOrEmpty() && enList.any { it.isNotBlank() }
+                    }
+                    .firstOrNull { it.id?.hashCode() == id || it.toDomain().id == id }
                 if (item != null) {
                     emit(Resource.Success(item.toDomain()))
                 } else {
