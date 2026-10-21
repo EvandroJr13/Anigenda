@@ -1,11 +1,10 @@
 package agenda.de.myapplicationanim1
 
 import agenda.de.myapplicationanim1.data.model.Anime
-import agenda.de.myapplicationanim1.data.model.AnitakuAnimeItem
-import agenda.de.myapplicationanim1.data.model.AnitakuInfoResponse
-import agenda.de.myapplicationanim1.data.model.AnitakuResponse
+import agenda.de.myapplicationanim1.data.model.BangumiDataResponse
+import agenda.de.myapplicationanim1.data.model.BangumiItemDto
 import agenda.de.myapplicationanim1.data.model.toDomain
-import agenda.de.myapplicationanim1.data.remote.AnitakuApiService
+import agenda.de.myapplicationanim1.data.remote.BangumiApiService
 import agenda.de.myapplicationanim1.data.repository.AnimeRepositoryImpl
 import agenda.de.myapplicationanim1.data.util.Resource
 import kotlinx.coroutines.test.runTest
@@ -17,55 +16,64 @@ import retrofit2.Response
 class AnimeRepositoryTest {
 
     @Test
-    fun anitakuAnimeItem_toDomain_mapping_isCorrect() {
-        val item = AnitakuAnimeItem(
-            id = "naruto",
-            title = "Naruto",
+    fun bangumiItemDto_toDomain_mapping_isCorrect() {
+        val dto = BangumiItemDto(
+            id = "test-id",
+            title = "Test Anime",
+            titleTranslate = mapOf("en" to listOf("Test Anime")),
+            type = "tv",
+            lang = "ja",
+            officialSite = "http://example.com",
+            begin = "2023-10-01T00:00:00.000Z",
+            broadcast = null,
+            weekDay = 1,
+            sites = emptyList(),
             image = "http://example.com/cover.jpg",
-            episodeNumber = 220,
-            releaseDate = "2002",
-            status = "Completed"
+            summary = "Test summary"
         )
 
-        val domain = item.toDomain()
+        val domain = dto.toDomain()
 
-        assertEquals("Naruto", domain.title)
+        assertEquals("Test Anime", domain.title)
         assertEquals("http://example.com/cover.jpg", domain.imageUrl)
-        assertEquals(220, domain.episodes)
+        assertEquals("Test summary", domain.synopsis)
+        assertEquals("Segunda", domain.airingDay)
     }
 
     @Test
-    fun getSchedules_returnsAnitakuAnimes() = runTest {
-        val fakeAnitakuApi = object : AnitakuApiService {
-            override suspend fun getRecentEpisodes(page: Int) = Response.success(AnitakuResponse())
-            override suspend fun getTopAiring(page: Int): Response<AnitakuResponse> {
+    fun getSchedules_returnsBangumiAnimes() = runTest {
+        val fakeBangumiApi = object : BangumiApiService {
+            override suspend fun getItems(): Response<BangumiDataResponse> {
                 return Response.success(
-                    AnitakuResponse(
-                        results = listOf(
-                            AnitakuAnimeItem(
-                                id = "naruto",
-                                title = "Naruto",
+                    BangumiDataResponse(
+                        items = listOf(
+                            BangumiItemDto(
+                                id = "1",
+                                title = "Test Anime",
+                                titleTranslate = mapOf("en" to listOf("Test Anime")),
+                                type = "tv",
+                                lang = "ja",
+                                officialSite = "http://example.com",
+                                begin = "2023-10-01T00:00:00.000Z",
+                                broadcast = null,
+                                weekDay = 1,
+                                sites = emptyList(),
                                 image = "http://example.com/cover.jpg",
-                                episodeNumber = 220,
-                                releaseDate = "2002",
-                                status = "RELEASING"
+                                summary = "Test summary"
                             )
                         )
                     )
                 )
             }
-            override suspend fun getPopular(page: Int) = Response.success(AnitakuResponse())
-            override suspend fun search(query: String) = Response.success(AnitakuResponse())
-            override suspend fun getInfo(id: String) = Response.success(AnitakuInfoResponse(id = id, title = "Naruto"))
         }
 
-        val repository = AnimeRepositoryImpl(anitakuApiService = fakeAnitakuApi)
+        val repository = AnimeRepositoryImpl(bangumiApiService = fakeBangumiApi)
         val results = mutableListOf<Resource<List<Anime>>>()
         repository.getSchedules("Segunda").collect { results.add(it) }
 
         assertTrue(results.any { it is Resource.Success })
         val successRes = results.first { it is Resource.Success } as Resource.Success
         assertEquals(1, successRes.data.size)
-        assertEquals("Naruto", successRes.data[0].title)
+        assertEquals("Test Anime", successRes.data[0].title)
     }
 }
