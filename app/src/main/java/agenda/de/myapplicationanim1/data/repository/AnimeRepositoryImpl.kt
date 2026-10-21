@@ -2,11 +2,11 @@ package agenda.de.myapplicationanim1.data.repository
 
 import android.util.Log
 import agenda.de.myapplicationanim1.data.model.Anime
-import agenda.de.myapplicationanim1.data.model.AnOtakuAnimeItem
 import agenda.de.myapplicationanim1.data.model.mapPortugueseDayToEnglishFilter
 import agenda.de.myapplicationanim1.data.model.toDomain
 import agenda.de.myapplicationanim1.data.remote.AnOtakuApiService
 import agenda.de.myapplicationanim1.data.remote.AnimeApiService
+import agenda.de.myapplicationanim1.data.remote.AnitakuApiService
 import agenda.de.myapplicationanim1.data.remote.BangumiApiService
 import agenda.de.myapplicationanim1.data.remote.RetrofitClient
 import agenda.de.myapplicationanim1.data.util.Resource
@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.flowOn
 
 class AnimeRepositoryImpl(
     private val anOtakuApiService: AnOtakuApiService = AnOtakuApiService.create(),
+    private val anitakuApiService: AnitakuApiService = AnitakuApiService.create(),
     private val animeApiService: AnimeApiService = AnimeApiService.create(),
     private val bangumiApiService: BangumiApiService = RetrofitClient.bangumiApiService,
 ) : AnimeRepository {
@@ -54,7 +55,23 @@ class AnimeRepositoryImpl(
             safeLogE("AnimeRepository", "AnOtaku API schedule failed: ${e.message}", e)
         }
 
-        // 2. Fallback: Jikan API
+        // 2. Anitaku / api-anfi Wrapper
+        if (animeList.isNullOrEmpty()) {
+            try {
+                val response = anitakuApiService.getRecentEpisodes()
+                if (response.isSuccessful) {
+                    val rawList = response.body()?.results ?: emptyList()
+                    val mapped = rawList.map { it.toDomain() }
+                    if (mapped.isNotEmpty()) {
+                        animeList = mapped
+                    }
+                }
+            } catch (e: Exception) {
+                safeLogE("AnimeRepository", "Anitaku wrapper failed: ${e.message}", e)
+            }
+        }
+
+        // 3. Fallback: Jikan API
         if (animeList.isNullOrEmpty()) {
             try {
                 val dayEnglish = mapPortugueseDayToEnglishFilter(filter)
@@ -103,6 +120,22 @@ class AnimeRepositoryImpl(
             safeLogE("AnimeRepository", "AnOtaku popular failed: ${e.message}", e)
         }
 
+        // Anitaku Wrapper Popular
+        if (animeList.isNullOrEmpty()) {
+            try {
+                val response = anitakuApiService.getPopular()
+                if (response.isSuccessful) {
+                    val rawList = response.body()?.results ?: emptyList()
+                    val mapped = rawList.map { it.toDomain() }
+                    if (mapped.isNotEmpty()) {
+                        animeList = mapped
+                    }
+                }
+            } catch (e: Exception) {
+                safeLogE("AnimeRepository", "Anitaku popular failed: ${e.message}", e)
+            }
+        }
+
         // Fallback: Jikan API
         if (animeList.isNullOrEmpty()) {
             try {
@@ -137,12 +170,19 @@ class AnimeRepositoryImpl(
                     .map { it.toDomain() }
                 emit(Resource.Success(mapped))
             } else {
-                val fallbackResponse = animeApiService.searchAnimes(query = query, type = "tv")
-                val rawList = fallbackResponse.data ?: emptyList()
-                val mapped = rawList
-                    .filter { !it.rating.orEmpty().contains("Rx", ignoreCase = true) }
-                    .map { it.toDomain() }
-                emit(Resource.Success(mapped))
+                val anitakuResponse = anitakuApiService.search(query = query)
+                if (anitakuResponse.isSuccessful) {
+                    val rawList = anitakuResponse.body()?.results ?: emptyList()
+                    val mapped = rawList.map { it.toDomain() }
+                    emit(Resource.Success(mapped))
+                } else {
+                    val fallbackResponse = animeApiService.searchAnimes(query = query, type = "tv")
+                    val rawList = fallbackResponse.data ?: emptyList()
+                    val mapped = rawList
+                        .filter { !it.rating.orEmpty().contains("Rx", ignoreCase = true) }
+                        .map { it.toDomain() }
+                    emit(Resource.Success(mapped))
+                }
             }
         } catch (e: Exception) {
             safeLogE("AnimeRepository", "Erro na busca: ${e.message}", e)
