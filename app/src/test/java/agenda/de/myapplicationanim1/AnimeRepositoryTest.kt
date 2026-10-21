@@ -1,15 +1,10 @@
 package agenda.de.myapplicationanim1
 
+import agenda.de.myapplicationanim1.data.model.AnOtakuAnimeItem
+import agenda.de.myapplicationanim1.data.model.AnOtakuScheduleResponse
 import agenda.de.myapplicationanim1.data.model.Anime
-import agenda.de.myapplicationanim1.data.model.MalAltTitles
-import agenda.de.myapplicationanim1.data.model.MalAnimeListResponse
-import agenda.de.myapplicationanim1.data.model.MalAnimeNode
-import agenda.de.myapplicationanim1.data.model.MalAnimeSingleResponse
-import agenda.de.myapplicationanim1.data.model.MalBroadcast
-import agenda.de.myapplicationanim1.data.model.MalPicture
-import agenda.de.myapplicationanim1.data.model.MalRankingItem
 import agenda.de.myapplicationanim1.data.model.toDomain
-import agenda.de.myapplicationanim1.data.remote.MalApiService
+import agenda.de.myapplicationanim1.data.remote.AnOtakuApiService
 import agenda.de.myapplicationanim1.data.repository.AnimeRepositoryImpl
 import agenda.de.myapplicationanim1.data.util.Resource
 import kotlinx.coroutines.test.runTest
@@ -21,55 +16,51 @@ import retrofit2.Response
 class AnimeRepositoryTest {
 
     @Test
-    fun malAnimeNode_toDomain_mapping_isCorrect() {
-        val node = MalAnimeNode(
-            id = 101,
+    fun anOtakuAnimeItem_toDomain_mapping_isCorrect() {
+        val item = AnOtakuAnimeItem(
+            id = "101",
             title = "Solo Leveling",
-            alternativeTitles = MalAltTitles(en = "Solo Leveling"),
-            mainPicture = MalPicture(large = "http://example.com/cover.jpg"),
-            synopsis = "Synopsis",
-            mean = 8.5,
-            status = "currently_airing",
-            broadcast = MalBroadcast(dayOfTheWeek = "monday", startTime = "12:00")
+            titleEnglish = "Solo Leveling",
+            coverImage = "http://example.com/cover.jpg",
+            airingDay = "Monday",
+            airingTime = "12:00",
+            status = "RELEASING"
         )
 
-        val domain = node.toDomain()
+        val domain = item.toDomain()
 
-        assertEquals(101, domain.id)
         assertEquals("Solo Leveling", domain.title)
         assertEquals("http://example.com/cover.jpg", domain.imageUrl)
         assertEquals("Segunda", domain.airingDay)
     }
 
     @Test
-    fun getSchedules_returnsMalAnimes() = runTest {
-        val fakeMalApi = object : MalApiService {
-            override suspend fun getAiringAnimeRanking(rankingType: String, limit: Int, fields: String): Response<MalAnimeListResponse> {
+    fun getSchedules_returnsAnOtakuAnimes() = runTest {
+        val fakeAnOtakuApi = object : AnOtakuApiService {
+            override suspend fun getSchedule(day: String?): Response<AnOtakuScheduleResponse> {
                 return Response.success(
-                    MalAnimeListResponse(
+                    AnOtakuScheduleResponse(
+                        status = "success",
                         data = listOf(
-                            MalRankingItem(
-                                node = MalAnimeNode(
-                                    id = 101,
-                                    title = "Solo Leveling",
-                                    alternativeTitles = MalAltTitles(en = "Solo Leveling"),
-                                    mainPicture = MalPicture(large = "http://example.com/cover.jpg"),
-                                    synopsis = "Synopsis",
-                                    mean = 8.5,
-                                    status = "currently_airing",
-                                    broadcast = MalBroadcast(dayOfTheWeek = "monday", startTime = "12:00")
-                                )
+                            AnOtakuAnimeItem(
+                                id = "101",
+                                title = "Solo Leveling",
+                                titleEnglish = "Solo Leveling",
+                                coverImage = "http://example.com/cover.jpg",
+                                airingDay = "Monday",
+                                airingTime = "12:00",
+                                status = "RELEASING"
                             )
                         )
                     )
                 )
             }
 
-            override suspend fun searchAnime(query: String, limit: Int, fields: String) = Response.success(MalAnimeListResponse())
-            override suspend fun getAnimeDetails(id: Int, fields: String) = Response.success(MalAnimeSingleResponse())
+            override suspend fun getPopularAnime() = Response.success(AnOtakuScheduleResponse())
+            override suspend fun searchAnime(query: String) = Response.success(AnOtakuScheduleResponse())
         }
 
-        val repository = AnimeRepositoryImpl(malApiService = fakeMalApi)
+        val repository = AnimeRepositoryImpl(anOtakuApiService = fakeAnOtakuApi)
         val results = mutableListOf<Resource<List<Anime>>>()
         repository.getSchedules("Segunda").collect { results.add(it) }
 

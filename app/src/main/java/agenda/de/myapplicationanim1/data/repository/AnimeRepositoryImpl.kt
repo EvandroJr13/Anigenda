@@ -2,15 +2,10 @@ package agenda.de.myapplicationanim1.data.repository
 
 import android.util.Log
 import agenda.de.myapplicationanim1.data.model.Anime
-import agenda.de.myapplicationanim1.data.model.AnimeModel
-import agenda.de.myapplicationanim1.data.model.isExplicitHentai
-import agenda.de.myapplicationanim1.data.model.isMatureContent
 import agenda.de.myapplicationanim1.data.model.mapPortugueseDayToEnglishFilter
 import agenda.de.myapplicationanim1.data.model.toDomain
-import agenda.de.myapplicationanim1.data.remote.AnimeApiService
-import agenda.de.myapplicationanim1.data.remote.BangumiApiService
-import agenda.de.myapplicationanim1.data.remote.MalApiService
-import agenda.de.myapplicationanim1.data.remote.RetrofitClient
+import agenda.de.myapplicationanim1.data.remote.AnOtakuApiService
+import agenda.de.myapplicationanim1.data.remote.AnimePlanetApiService
 import agenda.de.myapplicationanim1.data.util.Resource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -18,9 +13,8 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 
 class AnimeRepositoryImpl(
-    private val animeApiService: AnimeApiService = AnimeApiService.create(),
-    private val malApiService: MalApiService = MalApiService.create(),
-    private val bangumiApiService: BangumiApiService = RetrofitClient.bangumiApiService,
+    private val anOtakuApiService: AnOtakuApiService = AnOtakuApiService.create(),
+    private val animePlanetApiService: AnimePlanetApiService = AnimePlanetApiService.create()
 ) : AnimeRepository {
 
     private fun safeLogE(tag: String, msg: String, tr: Throwable? = null) {
@@ -35,64 +29,47 @@ class AnimeRepositoryImpl(
         emit(Resource.Loading)
         var animeList: List<Anime>? = null
 
-        // Tier 1: Try Jikan API (MAL open API for current season TV shows)
+        // Primary: AnOtaku API
         try {
             val dayEnglish = mapPortugueseDayToEnglishFilter(filter)
-            val response = if (dayEnglish != null) {
-                animeApiService.getDailySchedule(day = dayEnglish, type = "tv")
-            } else {
-                animeApiService.getCurrentSeasonAnime(filter = "tv")
-            }
-            val rawList = response.data ?: emptyList()
-            val filtered = processAndFilterAnimes(rawList, filter)
-            if (filtered.isNotEmpty()) {
-                animeList = filtered
+            val response = anOtakuApiService.getSchedule(day = dayEnglish)
+            if (response.isSuccessful) {
+                val rawList = response.body()?.data ?: emptyList()
+                val mapped = rawList
+                    .filter { it.isAdult != true }
+                    .map { it.toDomain() }
+
+                if (mapped.isNotEmpty()) {
+                    animeList = if (!filter.isNullOrBlank()) {
+                        val normalizedFilter = filter.trim().lowercase()
+                        mapped.filter { it.airingDay.lowercase() == normalizedFilter }
+                    } else mapped
+                }
             }
         } catch (e: Exception) {
-            safeLogE("AnimeRepository", "Jikan API schedule failed: ${e.message}", e)
+            safeLogE("AnimeRepository", "AnOtaku API schedule failed: ${e.message}", e)
         }
 
-        // Tier 2: Fallback to MAL API v2 if Jikan failed
+        // Recall / Fallback: Anime-Planet API
         if (animeList.isNullOrEmpty()) {
             try {
-                val malResponse = malApiService.getAiringAnimeRanking(limit = 50)
-                if (malResponse.isSuccessful) {
-                    val rankingItems = malResponse.body()?.data ?: emptyList()
-                    var mapped = rankingItems
-                        .mapNotNull { it.node }
-                        .filter { it.rating != "rx" && (it.status == "currently_airing" || it.status == "RELEASING") }
+                val dayEnglish = mapPortugueseDayToEnglishFilter(filter)
+                val response = animePlanetApiService.getSeasonalAnime(day = dayEnglish)
+                if (response.isSuccessful) {
+                    val rawList = response.body()?.results ?: emptyList()
+                    val mapped = rawList
+                        .filter { it.isMature != true }
                         .map { it.toDomain() }
 
-                    if (!filter.isNullOrBlank()) {
-                        val normalizedFilter = filter.trim().lowercase()
-                        mapped = mapped.filter { it.airingDay.lowercase() == normalizedFilter }
-                    }
                     if (mapped.isNotEmpty()) {
-                        animeList = mapped
+                        animeList = if (!filter.isNullOrBlank()) {
+                            val normalizedFilter = filter.trim().lowercase()
+                            mapped.filter { it.airingDay.lowercase() == normalizedFilter }
+                        } else mapped
                     }
                 }
             } catch (e: Exception) {
-                safeLogE("AnimeRepository", "MAL API v2 schedule failed: ${e.message}", e)
-            }
-        }
-
-        // Tier 3: Fallback to Bangumi Data CDN if both MAL options failed
-        if (animeList.isNullOrEmpty()) {
-            try {
-                val bangumiResponse = bangumiApiService.getItems()
-                if (bangumiResponse.isSuccessful) {
-                    val items = bangumiResponse.body()?.items ?: emptyList()
-                    var mapped = items.filter { !it.isMatureContent() }.map { it.toDomain() }
-                    if (!filter.isNullOrBlank()) {
-                        val normalizedFilter = filter.trim().lowercase()
-                        mapped = mapped.filter { it.airingDay.lowercase() == normalizedFilter }
-                    }
-                    if (mapped.isNotEmpty()) {
-                        animeList = mapped
-                    }
-                }
-            } catch (e: Exception) {
-                safeLogE("AnimeRepository", "Bangumi CDN fallback failed: ${e.message}", e)
+                safeLogE("AnimeRepository", "Anime-Planet recall failed: ${e.message}", e)
             }
         }
 
@@ -107,34 +84,35 @@ class AnimeRepositoryImpl(
         emit(Resource.Loading)
         var animeList: List<Anime>? = null
 
-        // Tier 1: Try Jikan API
         try {
-            val response = animeApiService.getPopularAnimes(type = "tv")
-            val rawList = response.data ?: emptyList()
-            val filtered = processAndFilterAnimes(rawList)
-            if (filtered.isNotEmpty()) {
-                animeList = filtered
+            val response = anOtakuApiService.getPopularAnime()
+            if (response.isSuccessful) {
+                val rawList = response.body()?.data ?: emptyList()
+                val mapped = rawList
+                    .filter { it.isAdult != true }
+                    .map { it.toDomain() }
+                if (mapped.isNotEmpty()) {
+                    animeList = mapped
+                }
             }
         } catch (e: Exception) {
-            safeLogE("AnimeRepository", "Jikan popular failed: ${e.message}", e)
+            safeLogE("AnimeRepository", "AnOtaku popular failed: ${e.message}", e)
         }
 
-        // Tier 2: Fallback to MAL API v2
         if (animeList.isNullOrEmpty()) {
             try {
-                val malResponse = malApiService.getAiringAnimeRanking(limit = 24)
-                if (malResponse.isSuccessful) {
-                    val rankingItems = malResponse.body()?.data ?: emptyList()
-                    val mapped = rankingItems
-                        .mapNotNull { it.node }
-                        .filter { it.rating != "rx" }
+                val response = animePlanetApiService.getSeasonalAnime()
+                if (response.isSuccessful) {
+                    val rawList = response.body()?.results ?: emptyList()
+                    val mapped = rawList
+                        .filter { it.isMature != true }
                         .map { it.toDomain() }
                     if (mapped.isNotEmpty()) {
                         animeList = mapped
                     }
                 }
             } catch (e: Exception) {
-                safeLogE("AnimeRepository", "MAL popular failed: ${e.message}", e)
+                safeLogE("AnimeRepository", "Anime-Planet popular recall failed: ${e.message}", e)
             }
         }
 
@@ -148,93 +126,49 @@ class AnimeRepositoryImpl(
     override fun searchAnime(query: String, genre: String?): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
         try {
-            val response = animeApiService.searchAnimes(query = query, type = "tv")
-            val rawList = response.data ?: emptyList()
-            val filteredDomainList = processAndFilterAnimes(rawList)
-            emit(Resource.Success(filteredDomainList))
-        } catch (e: Exception) {
-            safeLogE("AnimeRepository", "Erro na busca Jikan: ${e.message}", e)
-            try {
-                val malResponse = malApiService.searchAnime(query = query, limit = 50)
-                if (malResponse.isSuccessful) {
-                    val searchItems = malResponse.body()?.data ?: emptyList()
-                    val animeList = searchItems
-                        .mapNotNull { it.node }
-                        .filter { it.rating != "rx" }
+            val response = anOtakuApiService.searchAnime(query = query)
+            if (response.isSuccessful) {
+                val rawList = response.body()?.data ?: emptyList()
+                val mapped = rawList
+                    .filter { it.isAdult != true }
+                    .map { it.toDomain() }
+                emit(Resource.Success(mapped))
+            } else {
+                val recallResponse = animePlanetApiService.searchAnime(query = query)
+                if (recallResponse.isSuccessful) {
+                    val rawList = recallResponse.body()?.results ?: emptyList()
+                    val mapped = rawList
+                        .filter { it.isMature != true }
                         .map { it.toDomain() }
-                    emit(Resource.Success(animeList))
+                    emit(Resource.Success(mapped))
                 } else {
                     emit(Resource.Error("Erro na busca"))
                 }
-            } catch (ex: Exception) {
-                emit(Resource.Error("Erro na busca: ${ex.localizedMessage ?: ex.message}", ex))
             }
+        } catch (e: Exception) {
+            safeLogE("AnimeRepository", "Erro na busca: ${e.message}", e)
+            emit(Resource.Error("Erro na busca: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
 
     override fun getAnimeDetails(id: Int): Flow<Resource<Anime>> = flow {
         emit(Resource.Loading)
         try {
-            val response = animeApiService.getAnimeDetails(animeId = id)
-            val model = response.data
-            if (model != null) {
-                emit(Resource.Success(model.toDomain()))
+            val response = anOtakuApiService.getPopularAnime()
+            if (response.isSuccessful) {
+                val rawList = response.body()?.data ?: emptyList()
+                val item = rawList.firstOrNull { it.id.hashCode() == id }
+                if (item != null) {
+                    emit(Resource.Success(item.toDomain()))
+                } else {
+                    emit(Resource.Error("Detalhes do anime não encontrados"))
+                }
             } else {
-                emit(Resource.Error("Detalhes do anime não encontrados"))
+                emit(Resource.Error("Erro ao carregar detalhes"))
             }
         } catch (e: Exception) {
-            safeLogE("AnimeRepository", "Erro nos detalhes Jikan: ${e.message}", e)
-            try {
-                val malResponse = malApiService.getAnimeDetails(id = id)
-                val malSingle = malResponse.body()
-                if (malSingle?.id != null && malSingle.title != null) {
-                    val node = agenda.de.myapplicationanim1.data.model.MalAnimeNode(
-                        id = malSingle.id,
-                        title = malSingle.title,
-                        mainPicture = malSingle.mainPicture,
-                        alternativeTitles = malSingle.alternativeTitles,
-                        startDate = malSingle.startDate,
-                        synopsis = malSingle.synopsis,
-                        mean = malSingle.mean,
-                        status = malSingle.status,
-                        numEpisodes = malSingle.numEpisodes,
-                        broadcast = malSingle.broadcast,
-                        rating = malSingle.rating
-                    )
-                    emit(Resource.Success(node.toDomain()))
-                } else {
-                    emit(Resource.Error("Detalhes não encontrados"))
-                }
-            } catch (ex: Exception) {
-                emit(Resource.Error("Erro ao carregar detalhes: ${ex.localizedMessage ?: ex.message}", ex))
-            }
+            safeLogE("AnimeRepository", "Erro nos detalhes: ${e.message}", e)
+            emit(Resource.Error("Erro ao carregar detalhes: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
-
-    private fun processAndFilterAnimes(
-        animes: List<AnimeModel>,
-        dayFilter: String? = null
-    ): List<Anime> {
-        val filteredResult = mutableListOf<Anime>()
-
-        for (anime in animes) {
-            // 1. Must be currently airing
-            val isCurrentlyAiring = anime.airing == true ||
-                    anime.status.equals("Currently Airing", ignoreCase = true) ||
-                    anime.status.equals("RELEASING", ignoreCase = true)
-            if (!isCurrentlyAiring) continue
-
-            // 2. Filter out explicit Hentai/Rx
-            if (anime.isExplicitHentai()) continue
-
-            // 3. Filter strictly TV series (exclude music videos, promos, commercials)
-            val typeStr = anime.type ?: "TV"
-            if (!typeStr.equals("TV", ignoreCase = true) && !typeStr.equals("TV Special", ignoreCase = true)) continue
-
-            val domainAnime = anime.toDomain(overrideDay = dayFilter)
-            filteredResult.add(domainAnime)
-        }
-
-        return filteredResult
-    }
 }
