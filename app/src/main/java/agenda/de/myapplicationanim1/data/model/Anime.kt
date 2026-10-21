@@ -64,11 +64,32 @@ fun getDayOfWeekFromTimestamp(airingAt: Long?): String {
     }
 }
 
+fun getDayOfWeekFromDate(year: Int?, month: Int?, day: Int?): String {
+    if (year == null || month == null || day == null) return "Segunda"
+    return try {
+        val cal = Calendar.getInstance().apply {
+            set(year, month - 1, day)
+        }
+        when (cal.get(Calendar.DAY_OF_WEEK)) {
+            Calendar.MONDAY -> "Segunda"
+            Calendar.TUESDAY -> "Terça"
+            Calendar.WEDNESDAY -> "Quarta"
+            Calendar.THURSDAY -> "Quinta"
+            Calendar.FRIDAY -> "Sexta"
+            Calendar.SATURDAY -> "Sábado"
+            Calendar.SUNDAY -> "Domingo"
+            else -> "Segunda"
+        }
+    } catch (_: Exception) {
+        "Segunda"
+    }
+}
+
 fun MediaDto.toDomain(): Anime {
     return try {
-        val romaji = title?.romaji ?: ""
-        val english = title?.english ?: ""
-        val native = title?.native ?: ""
+        val romaji = title?.romaji?.trim() ?: ""
+        val english = title?.english?.trim() ?: ""
+        val native = title?.native?.trim() ?: ""
         val bestTitle = english.ifEmpty { romaji.ifEmpty { native.ifEmpty { "Unknown Title" } } }
         val titleJapanese = native.ifEmpty { romaji }
 
@@ -87,7 +108,10 @@ fun MediaDto.toDomain(): Anime {
             } else null
         }
 
-        val airingDay = getDayOfWeekFromTimestamp(nextEpInfo?.airingAt)
+        val computedDay = getDayOfWeekFromTimestamp(nextEpInfo?.airingAt)
+        val airingDay = computedDay.ifEmpty {
+            getDayOfWeekFromDate(startDate?.year, startDate?.month, startDate?.day)
+        }
 
         val calTime = nextEpInfo?.let {
             Calendar.getInstance().apply { timeInMillis = it.airingAt * 1000L }

@@ -295,6 +295,35 @@ fun AnimeCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+
+                // Streaming Badge (Crunchyroll, Netflix, HBO, Prime Video, Disney+)
+                val streamingPlatform = anime.externalLinks.firstOrNull { link ->
+                    val site = link.site.lowercase()
+                    site.contains("crunchyroll") ||
+                    site.contains("netflix") ||
+                    site.contains("hbo") ||
+                    site.contains("max") ||
+                    site.contains("prime") ||
+                    site.contains("amazon") ||
+                    site.contains("disney") ||
+                    site.contains("hulu")
+                }
+                if (streamingPlatform != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                        modifier = Modifier.padding(top = 2.dp)
+                    ) {
+                        Text(
+                            text = streamingPlatform.site,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
             }
         }
     }
