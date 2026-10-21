@@ -2,253 +2,138 @@ package agenda.de.myapplicationanim1.data.repository
 
 import android.util.Log
 import agenda.de.myapplicationanim1.data.model.Anime
-import agenda.de.myapplicationanim1.data.model.isMatureContent
+import agenda.de.myapplicationanim1.data.model.AnimeModel
+import agenda.de.myapplicationanim1.data.model.mapPortugueseDayToEnglishFilter
 import agenda.de.myapplicationanim1.data.model.toDomain
-import agenda.de.myapplicationanim1.data.remote.AniListApiService
-import agenda.de.myapplicationanim1.data.remote.BangumiApiService
-import agenda.de.myapplicationanim1.data.remote.RetrofitClient
+import agenda.de.myapplicationanim1.data.remote.AnimeApiService
 import agenda.de.myapplicationanim1.data.util.Resource
-import com.squareup.moshi.JsonDataException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import java.io.IOException
-import java.util.Calendar
 
 class AnimeRepositoryImpl(
-    private val apiService: AniListApiService = RetrofitClient.aniListApiService,
-    private val bangumiApiService: BangumiApiService = RetrofitClient.bangumiApiService,
+    private val apiService: AnimeApiService = AnimeApiService.create()
 ) : AnimeRepository {
 
-    private companion object {
-        const val MEDIA_FIELDS = """
-            id
-            title {
-              english
-              romaji
-              native
-            }
-            coverImage {
-              extraLarge
-              large
-            }
-            description
-            averageScore
-            episodes
-            status
-            startDate {
-              year
-              month
-              day
-            }
-            nextAiringEpisode {
-              airingAt
-              episode
-            }
-            genres
-            studios(isMain: true) {
-              nodes {
-                name
-              }
-            }
-            trailer {
-              id
-              site
-            }
-            isAdult
-            externalLinks {
-              site
-              url
-            }
-        """
+    private val allowedPlatforms = listOf(
+        "Crunchyroll",
+        "Netflix",
+        "Disney+",
+        "Amazon Prime Video",
+        "Prime Video",
+        "HBO Max",
+        "Max",
+        "Hulu"
+    )
+
+    private fun safeLogE(tag: String, msg: String, tr: Throwable? = null) {
+        try {
+            if (tr != null) Log.e(tag, msg, tr) else Log.e(tag, msg)
+        } catch (_: Throwable) {
+            println("[$tag] ERROR: $msg ${tr?.localizedMessage ?: ""}")
+        }
     }
 
     override fun getSchedules(filter: String?): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
-        var animeList: List<Anime>? = null
-
-        // 1. Try AniList GraphQL API first for real-time airing schedules, English titles, posters & strict non-adult filtering
         try {
-            val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-            val query = """
-                query (${'$'}year: Int) {
-                  Page(page: 1, perPage: 50) {
-                    media(seasonYear: ${'$'}year, type: ANIME, status: RELEASING, sort: [POPULARITY_DESC], isAdult: false) {
-                      $MEDIA_FIELDS
-                    }
-                  }
-                }
-            """.trimIndent()
-
-            val variables = mapOf("year" to currentYear)
-            val body = mapOf("query" to query, "variables" to variables)
-            val response = apiService.graphqlQuery(body)
-
-            if (response.isSuccessful) {
-                val mediaList = response.body()?.data?.page?.media ?: emptyList()
-                val mapped = mediaList.filter { it.isAdult != true }.map { it.toDomain() }
-                if (mapped.isNotEmpty()) {
-                    animeList = mapped
-                }
-            }
+            val dayEnglish = mapPortugueseDayToEnglishFilter(filter)
+            val response = apiService.getDailySchedule(day = dayEnglish, sfw = true)
+            val rawList = response.data ?: emptyList()
+            val filteredDomainList = processAndFilterAnimes(rawList)
+            emit(Resource.Success(filteredDomainList))
         } catch (e: Exception) {
-            Log.w("AnimeRepository", "AniList GraphQL failed: ${e.message}")
-        }
-
-        // 2. Fallback to Bangumi Data CDN if AniList failed or returned empty
-        if (animeList.isNullOrEmpty()) {
-            try {
-                val response = bangumiApiService.getItems()
-                if (response.isSuccessful) {
-                    val items = response.body()?.items ?: emptyList()
-                    val filteredItems = items.filter { !it.isMatureContent() }
-                    val mapped = filteredItems.map { it.toDomain() }
-                    if (mapped.isNotEmpty()) {
-                        animeList = mapped
-                    }
-                }
-            } catch (e: Exception) {
-                Log.w("AnimeRepository", "Bangumi CDN failed or timed out: ${e.message}")
-            }
-        }
-
-        if (!animeList.isNullOrEmpty()) {
-            var list = animeList
-            list = list.filter { anime ->
-                anime.status.equals("RELEASING", ignoreCase = true) ||
-                        (anime.nextAiringEpisode != null && anime.nextAiringEpisode.airingAt > 0L)
-            }
-
-            if (!filter.isNullOrBlank()) {
-                val normalizedFilter = filter.trim().lowercase()
-                list = list.filter { anime ->
-                    val airingDay = if (anime.nextAiringEpisode != null && anime.nextAiringEpisode.airingAt > 0L) {
-                        agenda.de.myapplicationanim1.data.model.getDayOfWeekFromTimestamp(anime.nextAiringEpisode.airingAt)
-                    } else {
-                        anime.airingDay
-                    }
-                    airingDay.lowercase() == normalizedFilter
-                }
-            }
-            emit(Resource.Success(list))
-        } else {
-            emit(Resource.Error("Erro ao carregar programação. Verifique sua conexão e tente novamente."))
+            safeLogE("AnimeRepository", "Erro ao carregar programação: ${e.message}", e)
+            emit(Resource.Error("Erro ao carregar programação: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
 
     override fun getPopularAnime(): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
         try {
-            val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-            val query = """
-                query (${'$'}year: Int) {
-                  Page(page: 1, perPage: 24) {
-                    media(seasonYear: ${'$'}year, type: ANIME, sort: [POPULARITY_DESC, SCORE_DESC], isAdult: false) {
-                      $MEDIA_FIELDS
-                    }
-                  }
-                }
-            """.trimIndent()
-
-            val variables = mapOf("year" to currentYear)
-            val body = mapOf("query" to query, "variables" to variables)
-            val response = apiService.graphqlQuery(body)
-
-            if (response.isSuccessful) {
-                val mediaList = response.body()?.data?.page?.media ?: emptyList()
-                val animeList = mediaList.filter { it.isAdult != true }.map { it.toDomain() }
-                emit(Resource.Success(animeList))
-            } else {
-                emit(Resource.Error("Erro na API AniList: ${response.code()} ${response.message()}"))
-            }
-        } catch (e: JsonDataException) {
-            emit(Resource.Error("Erro ao processar dados: ${e.localizedMessage}", e))
-        } catch (e: IOException) {
-            emit(Resource.Error("Erro de conexão. Verifique sua internet.", e))
+            val response = apiService.getPopularAnimes(sfw = true)
+            val rawList = response.data ?: emptyList()
+            val filteredDomainList = processAndFilterAnimes(rawList)
+            emit(Resource.Success(filteredDomainList))
         } catch (e: Exception) {
-            emit(Resource.Error(e.localizedMessage ?: "Ocorreu um erro inesperado", e))
+            safeLogE("AnimeRepository", "Erro ao carregar animes populares: ${e.message}", e)
+            emit(Resource.Error("Erro ao carregar animes populares: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
 
     override fun searchAnime(query: String, genre: String?): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
         try {
-            val gqlQuery = """
-                query (${'$'}search: String, ${'$'}genre: String, ${'$'}page: Int, ${'$'}perPage: Int) {
-                  Page(page: ${'$'}page, perPage: ${'$'}perPage) {
-                    media(search: ${'$'}search, genre: ${'$'}genre, type: ANIME, sort: [POPULARITY_DESC], isAdult: false) {
-                      $MEDIA_FIELDS
-                    }
-                  }
-                }
-            """.trimIndent()
-
-            val variables = mutableMapOf<String, Any>(
-                "page" to 1,
-                "perPage" to 50
-            )
-            if (query.isNotBlank()) {
-                variables["search"] = query
-            }
-            if (!genre.isNullOrBlank()) {
-                variables["genre"] = genre
-            }
-
-            val body = mapOf("query" to gqlQuery, "variables" to variables)
-            val response = apiService.graphqlQuery(body)
-
-            if (response.isSuccessful) {
-                val mediaList = response.body()?.data?.page?.media ?: emptyList()
-                val animeList = mediaList.filter { it.isAdult != true }.map { it.toDomain() }
-                emit(Resource.Success(animeList))
-            } else {
-                emit(Resource.Error("Erro na busca: ${response.code()} ${response.message()}"))
-            }
-        } catch (e: JsonDataException) {
-            emit(Resource.Error("Erro ao processar dados: ${e.localizedMessage}", e))
-        } catch (e: IOException) {
-            emit(Resource.Error("Erro de conexão. Verifique sua internet.", e))
+            val response = apiService.searchAnimes(query = query, sfw = true)
+            val rawList = response.data ?: emptyList()
+            val filteredDomainList = processAndFilterAnimes(rawList, checkStreaming = false)
+            emit(Resource.Success(filteredDomainList))
         } catch (e: Exception) {
-            emit(Resource.Error(e.localizedMessage ?: "Ocorreu um erro inesperado", e))
+            safeLogE("AnimeRepository", "Erro na busca: ${e.message}", e)
+            emit(Resource.Error("Erro na busca: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
 
     override fun getAnimeDetails(id: Int): Flow<Resource<Anime>> = flow {
         emit(Resource.Loading)
         try {
-            val query = """
-                query (${'$'}id: Int) {
-                  Media(id: ${'$'}id, type: ANIME) {
-                    $MEDIA_FIELDS
-                  }
+            val response = apiService.getAnimeDetails(animeId = id)
+            val model = response.data
+            if (model != null) {
+                var streamingList = model.streaming?.map { it.name } ?: emptyList()
+                if (streamingList.isEmpty()) {
+                    try {
+                        val streamResponse = apiService.getAnimeStreamingPlatforms(model.id)
+                        streamingList = streamResponse.data?.map { it.name } ?: emptyList()
+                    } catch (_: Exception) {}
                 }
-            """.trimIndent()
-
-            val variables = mapOf("id" to id)
-            val body = mapOf("query" to query, "variables" to variables)
-            val response = apiService.graphqlQuery(body)
-
-            if (response.isSuccessful) {
-                val mediaDto = response.body()?.data?.media
-                if (mediaDto != null) {
-                    if (mediaDto.isAdult == true) {
-                        emit(Resource.Error("Conteúdo adulto restrito"))
-                    } else {
-                        emit(Resource.Success(mediaDto.toDomain()))
-                    }
-                } else {
-                    emit(Resource.Error("Detalhes do anime não encontrados"))
+                val matched = streamingList.filter { platform ->
+                    allowedPlatforms.any { allowed -> platform.contains(allowed, ignoreCase = true) }
                 }
+                emit(Resource.Success(model.toDomain(matched)))
             } else {
-                emit(Resource.Error("Erro ao carregar detalhes: ${response.code()} ${response.message()}"))
+                emit(Resource.Error("Detalhes do anime não encontrados"))
             }
-        } catch (e: JsonDataException) {
-            emit(Resource.Error("Erro ao processar dados: ${e.localizedMessage}", e))
-        } catch (e: IOException) {
-            emit(Resource.Error("Erro de conexão. Verifique sua internet.", e))
         } catch (e: Exception) {
-            emit(Resource.Error(e.localizedMessage ?: "Ocorreu um erro inesperado", e))
+            safeLogE("AnimeRepository", "Erro ao carregar detalhes: ${e.message}", e)
+            emit(Resource.Error("Erro ao carregar detalhes: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
+
+    private suspend fun processAndFilterAnimes(
+        animes: List<AnimeModel>,
+        checkStreaming: Boolean = true
+    ): List<Anime> {
+        val filteredResult = mutableListOf<Anime>()
+
+        for (anime in animes) {
+            // 1. Secondary age/mature rating filter (Rx / Hentai)
+            val rating = anime.rating ?: ""
+            val isMature = rating.contains("Rx", ignoreCase = true) ||
+                    rating.contains("Hentai", ignoreCase = true)
+            if (isMature) continue
+
+            // 2. Fetch and map streaming platforms for the anime
+            var streamingList = anime.streaming?.map { it.name } ?: emptyList()
+
+            if (checkStreaming && streamingList.isEmpty()) {
+                try {
+                    val streamResponse = apiService.getAnimeStreamingPlatforms(anime.id)
+                    streamingList = streamResponse.data?.map { it.name } ?: emptyList()
+                } catch (_: Exception) {}
+            }
+
+            // 3. Filter matched streaming platforms
+            val matchedPlatforms = streamingList.filter { platform ->
+                allowedPlatforms.any { allowed -> platform.contains(allowed, ignoreCase = true) }
+            }
+
+            if (!checkStreaming || matchedPlatforms.isNotEmpty() || streamingList.isEmpty()) {
+                filteredResult.add(anime.toDomain(matchedPlatforms))
+            }
+        }
+
+        return filteredResult
+    }
 }
