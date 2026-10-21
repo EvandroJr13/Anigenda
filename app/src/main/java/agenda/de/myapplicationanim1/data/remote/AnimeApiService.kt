@@ -11,14 +11,21 @@ import retrofit2.http.Query
 
 interface AnimeApiService {
 
-    // 1. Animes do Dia / Calendário de Lançamentos
+    // 1. Current Season Anime
+    @GET("seasons/now")
+    suspend fun getCurrentSeasonAnime(
+        @Query("sfw") sfw: Boolean = true,
+        @Query("page") page: Int = 1
+    ): AnimeListResponse
+
+    // 2. Animes do Dia / Calendário de Lançamentos
     @GET("schedules")
     suspend fun getDailySchedule(
         @Query("filter") day: String? = null, // Ex: "monday", "tuesday". Se nulo, traz o dia atual
         @Query("sfw") sfw: Boolean = true     // Filtra conteúdo adulto (Explicit/Hentai)
     ): AnimeListResponse
 
-    // 2. Animes Mais Populares
+    // 3. Animes Mais Populares
     @GET("top/anime")
     suspend fun getPopularAnimes(
         @Query("filter") filter: String = "bypopularity",
@@ -26,19 +33,19 @@ interface AnimeApiService {
         @Query("page") page: Int = 1
     ): AnimeListResponse
 
-    // 3. Puxar Plataformas de Streaming do Anime (Caso o endpoint primário não preencha o array)
+    // 4. Puxar Plataformas de Streaming do Anime
     @GET("anime/{id}/streaming")
     suspend fun getAnimeStreamingPlatforms(
         @Path("id") animeId: Int
     ): StreamingLinksResponse
 
-    // 4. Detalhes de um anime
+    // 5. Detalhes de um anime
     @GET("anime/{id}")
     suspend fun getAnimeDetails(
         @Path("id") animeId: Int
     ): AnimeDetailResponse
 
-    // 5. Busca de animes por texto
+    // 6. Busca de animes por texto
     @GET("anime")
     suspend fun searchAnimes(
         @Query("q") query: String,
@@ -65,8 +72,8 @@ interface AnimeApiService {
                     chain.proceed(newRequest)
                 }
                 .addInterceptor(loggingInterceptor)
-                .connectTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-                .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+                .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+                .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
                 .build()
 
             return Retrofit.Builder()
