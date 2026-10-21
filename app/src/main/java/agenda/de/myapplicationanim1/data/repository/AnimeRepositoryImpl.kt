@@ -1,5 +1,6 @@
 package agenda.de.myapplicationanim1.data.repository
 
+import android.util.Log
 import agenda.de.myapplicationanim1.data.model.Anime
 import agenda.de.myapplicationanim1.data.model.toDomain
 import agenda.de.myapplicationanim1.data.remote.BangumiApiService
@@ -18,47 +19,60 @@ class AnimeRepositoryImpl(
 
     override fun getSchedules(filter: String?): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
+        var animeList: List<Anime>? = null
+
+        // 1. Try Bangumi API CDN
         try {
             val response = bangumiApiService.getItems()
-
             if (response.isSuccessful) {
                 val items = response.body() ?: emptyList()
-                var animeList = items.map { it.toDomain() }
-
-                animeList = animeList.filter { anime ->
-                    anime.status.equals("RELEASING", ignoreCase = true) ||
-                            (anime.nextAiringEpisode != null && anime.nextAiringEpisode.airingAt > 0L)
-                }
-
-                if (!filter.isNullOrBlank()) {
-                    val normalizedFilter = filter.trim().lowercase()
-                    animeList = animeList.filter { anime ->
-                        val airingDay = if (anime.nextAiringEpisode != null && anime.nextAiringEpisode.airingAt > 0L) {
-                            agenda.de.myapplicationanim1.data.model.getDayOfWeekFromTimestamp(anime.nextAiringEpisode.airingAt)
-                        } else {
-                            anime.airingDay
-                        }
-                        airingDay.lowercase() == normalizedFilter
-                    }
-                }
-
-                emit(Resource.Success(animeList))
-            } else {
-                val jikanResponse = jikanApiService.getCurrentSeasonAnime()
-                if (jikanResponse.isSuccessful) {
-                    val dtoList = jikanResponse.body()?.data ?: emptyList()
-                    var animeList = dtoList.map { it.toDomain() }
-                    if (!filter.isNullOrBlank()) {
-                        val normalizedFilter = filter.trim().lowercase()
-                        animeList = animeList.filter { it.airingDay.lowercase() == normalizedFilter }
-                    }
-                    emit(Resource.Success(animeList))
-                } else {
-                    emit(Resource.Error("Erro ao carregar programação: ${response.code()}"))
+                val mapped = items.map { it.toDomain() }
+                if (mapped.isNotEmpty()) {
+                    animeList = mapped
                 }
             }
         } catch (e: Exception) {
-            emit(Resource.Error(e.localizedMessage ?: "Erro de conexão", e))
+            Log.w("AnimeRepository", "Bangumi CDN failed or timed out: ${e.message}")
+        }
+
+        // 2. Fallback to Jikan API if Bangumi failed or returned empty
+        if (animeList.isNullOrEmpty()) {
+            try {
+                val jikanResponse = jikanApiService.getCurrentSeasonAnime()
+                if (jikanResponse.isSuccessful) {
+                    val dtoList = jikanResponse.body()?.data ?: emptyList()
+                    val mapped = dtoList.map { it.toDomain() }
+                    if (mapped.isNotEmpty()) {
+                        animeList = mapped
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w("AnimeRepository", "Jikan API failed or timed out: ${e.message}")
+            }
+        }
+
+        if (!animeList.isNullOrEmpty()) {
+            var list = animeList
+            // Strictly filter out animes that are NOT currently releasing
+            list = list.filter { anime ->
+                anime.status.equals("RELEASING", ignoreCase = true) ||
+                        (anime.nextAiringEpisode != null && anime.nextAiringEpisode.airingAt > 0L)
+            }
+
+            if (!filter.isNullOrBlank()) {
+                val normalizedFilter = filter.trim().lowercase()
+                list = list.filter { anime ->
+                    val airingDay = if (anime.nextAiringEpisode != null && anime.nextAiringEpisode.airingAt > 0L) {
+                        agenda.de.myapplicationanim1.data.model.getDayOfWeekFromTimestamp(anime.nextAiringEpisode.airingAt)
+                    } else {
+                        anime.airingDay
+                    }
+                    airingDay.lowercase() == normalizedFilter
+                }
+            }
+            emit(Resource.Success(list))
+        } else {
+            emit(Resource.Error("Falha na conexão. Verifique sua internet e tente novamente."))
         }
     }.flowOn(Dispatchers.IO)
 
@@ -74,7 +88,7 @@ class AnimeRepositoryImpl(
                 emit(Resource.Error("Erro ao carregar animes populares: ${response.code()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error(e.localizedMessage ?: "Erro inesperado", e))
+            emit(Resource.Error("Erro na conexão: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
 
@@ -90,7 +104,7 @@ class AnimeRepositoryImpl(
                 emit(Resource.Error("Erro na busca: ${response.code()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error(e.localizedMessage ?: "Erro inesperado", e))
+            emit(Resource.Error("Erro na busca: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
 
@@ -109,7 +123,7 @@ class AnimeRepositoryImpl(
                 emit(Resource.Error("Erro ao carregar detalhes: ${response.code()}"))
             }
         } catch (e: Exception) {
-            emit(Resource.Error(e.localizedMessage ?: "Erro inesperado", e))
+            emit(Resource.Error("Erro ao carregar detalhes: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
 }

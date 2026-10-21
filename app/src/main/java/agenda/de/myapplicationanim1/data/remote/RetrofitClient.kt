@@ -17,24 +17,31 @@ import java.util.concurrent.TimeUnit
 class RateLimitRetryInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
-        var response = chain.proceed(request)
         var tryCount = 0
-        val maxRetries = 3
+        val maxRetries = 2
 
-        while (response.code == 429 && tryCount < maxRetries) {
-            tryCount++
-            response.close()
-            val waitTime = 1500L * tryCount
-            Log.w("AniListApi", "HTTP 429 Too Many Requests (Rate Limit). Retrying in ${waitTime}ms (Attempt $tryCount/$maxRetries)...")
+        while (true) {
             try {
-                Thread.sleep(waitTime)
-            } catch (_: InterruptedException) {
-                Thread.currentThread().interrupt()
-                break
+                val response = chain.proceed(request)
+                if (response.code == 429 && tryCount < maxRetries) {
+                    tryCount++
+                    response.close()
+                    val waitTime = 1500L * tryCount
+                    Log.w("Network", "HTTP 429 Too Many Requests. Retrying in ${waitTime}ms...")
+                    Thread.sleep(waitTime)
+                    continue
+                }
+                return response
+            } catch (e: Exception) {
+                if (tryCount < maxRetries && (e is java.net.SocketTimeoutException || e is java.io.IOException)) {
+                    tryCount++
+                    Log.w("Network", "Network Timeout/IO Error: ${e.message}. Retrying attempt $tryCount/$maxRetries...")
+                    Thread.sleep(1000L)
+                } else {
+                    throw e
+                }
             }
-            response = chain.proceed(request)
         }
-        return response
     }
 }
 
@@ -73,14 +80,15 @@ object RetrofitClient {
         val loggingInterceptor = HttpLoggingInterceptor { message ->
             Log.d("AniListHttp", message)
         }.apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = HttpLoggingInterceptor.Level.BASIC
         }
         val builder = OkHttpClient.Builder()
             .addInterceptor(UserAgentInterceptor())
             .addInterceptor(RateLimitRetryInterceptor())
             .addInterceptor(loggingInterceptor)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
 
         appContext?.let { ctx ->
             try {
