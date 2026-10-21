@@ -1,13 +1,15 @@
 package agenda.de.myapplicationanim1
 
 import agenda.de.myapplicationanim1.data.model.Anime
-import agenda.de.myapplicationanim1.data.model.KitsuAnimeAttributes
-import agenda.de.myapplicationanim1.data.model.KitsuAnimeData
-import agenda.de.myapplicationanim1.data.model.KitsuAnimeListResponse
-import agenda.de.myapplicationanim1.data.model.KitsuAnimeSingleResponse
-import agenda.de.myapplicationanim1.data.model.KitsuImageWrapper
+import agenda.de.myapplicationanim1.data.model.MalAltTitles
+import agenda.de.myapplicationanim1.data.model.MalAnimeListResponse
+import agenda.de.myapplicationanim1.data.model.MalAnimeNode
+import agenda.de.myapplicationanim1.data.model.MalAnimeSingleResponse
+import agenda.de.myapplicationanim1.data.model.MalBroadcast
+import agenda.de.myapplicationanim1.data.model.MalPicture
+import agenda.de.myapplicationanim1.data.model.MalRankingItem
 import agenda.de.myapplicationanim1.data.model.toDomain
-import agenda.de.myapplicationanim1.data.remote.KitsuApiService
+import agenda.de.myapplicationanim1.data.remote.MalApiService
 import agenda.de.myapplicationanim1.data.repository.AnimeRepositoryImpl
 import agenda.de.myapplicationanim1.data.util.Resource
 import kotlinx.coroutines.test.runTest
@@ -19,22 +21,19 @@ import retrofit2.Response
 class AnimeRepositoryTest {
 
     @Test
-    fun kitsuAnimeData_toDomain_mapping_isCorrect() {
-        val data = KitsuAnimeData(
-            id = "101",
-            type = "anime",
-            attributes = KitsuAnimeAttributes(
-                canonicalTitle = "Solo Leveling",
-                titles = mapOf("en" to "Solo Leveling"),
-                posterImage = KitsuImageWrapper(large = "http://example.com/cover.jpg"),
-                synopsis = "Synopsis",
-                averageRating = "85.0",
-                status = "current",
-                startDate = "2024-01-08"
-            )
+    fun malAnimeNode_toDomain_mapping_isCorrect() {
+        val node = MalAnimeNode(
+            id = 101,
+            title = "Solo Leveling",
+            alternativeTitles = MalAltTitles(en = "Solo Leveling"),
+            mainPicture = MalPicture(large = "http://example.com/cover.jpg"),
+            synopsis = "Synopsis",
+            mean = 8.5,
+            status = "currently_airing",
+            broadcast = MalBroadcast(dayOfTheWeek = "monday", startTime = "12:00")
         )
 
-        val domain = data.toDomain()
+        val domain = node.toDomain()
 
         assertEquals(101, domain.id)
         assertEquals("Solo Leveling", domain.title)
@@ -43,23 +42,22 @@ class AnimeRepositoryTest {
     }
 
     @Test
-    fun getSchedules_returnsKitsuAnimes() = runTest {
-        val fakeKitsuApi = object : KitsuApiService {
-            override suspend fun getCurrentlyAiringAnime(): Response<KitsuAnimeListResponse> {
+    fun getSchedules_returnsMalAnimes() = runTest {
+        val fakeMalApi = object : MalApiService {
+            override suspend fun getAiringAnimeRanking(rankingType: String, limit: Int, fields: String): Response<MalAnimeListResponse> {
                 return Response.success(
-                    KitsuAnimeListResponse(
+                    MalAnimeListResponse(
                         data = listOf(
-                            KitsuAnimeData(
-                                id = "101",
-                                type = "anime",
-                                attributes = KitsuAnimeAttributes(
-                                    canonicalTitle = "Solo Leveling",
-                                    titles = mapOf("en" to "Solo Leveling"),
-                                    posterImage = KitsuImageWrapper(large = "http://example.com/cover.jpg"),
+                            MalRankingItem(
+                                node = MalAnimeNode(
+                                    id = 101,
+                                    title = "Solo Leveling",
+                                    alternativeTitles = MalAltTitles(en = "Solo Leveling"),
+                                    mainPicture = MalPicture(large = "http://example.com/cover.jpg"),
                                     synopsis = "Synopsis",
-                                    averageRating = "85.0",
-                                    status = "current",
-                                    startDate = "2024-01-08"
+                                    mean = 8.5,
+                                    status = "currently_airing",
+                                    broadcast = MalBroadcast(dayOfTheWeek = "monday", startTime = "12:00")
                                 )
                             )
                         )
@@ -67,11 +65,11 @@ class AnimeRepositoryTest {
                 )
             }
 
-            override suspend fun searchAnime(query: String, limit: Int) = Response.success(KitsuAnimeListResponse())
-            override suspend fun getAnimeDetails(id: String) = Response.success(KitsuAnimeSingleResponse())
+            override suspend fun searchAnime(query: String, limit: Int, fields: String) = Response.success(MalAnimeListResponse())
+            override suspend fun getAnimeDetails(id: Int, fields: String) = Response.success(MalAnimeSingleResponse())
         }
 
-        val repository = AnimeRepositoryImpl(kitsuApiService = fakeKitsuApi)
+        val repository = AnimeRepositoryImpl(malApiService = fakeMalApi)
         val results = mutableListOf<Resource<List<Anime>>>()
         repository.getSchedules("Segunda").collect { results.add(it) }
 
