@@ -2,13 +2,8 @@ package agenda.de.myapplicationanim1.data.repository
 
 import android.util.Log
 import agenda.de.myapplicationanim1.data.model.Anime
-import agenda.de.myapplicationanim1.data.model.mapPortugueseDayToEnglishFilter
 import agenda.de.myapplicationanim1.data.model.toDomain
-import agenda.de.myapplicationanim1.data.remote.AnOtakuApiService
-import agenda.de.myapplicationanim1.data.remote.AnimeApiService
 import agenda.de.myapplicationanim1.data.remote.AnitakuApiService
-import agenda.de.myapplicationanim1.data.remote.BangumiApiService
-import agenda.de.myapplicationanim1.data.remote.RetrofitClient
 import agenda.de.myapplicationanim1.data.util.Resource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -16,10 +11,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 
 class AnimeRepositoryImpl(
-    private val anOtakuApiService: AnOtakuApiService = AnOtakuApiService.create(),
     private val anitakuApiService: AnitakuApiService = AnitakuApiService.create(),
-    private val animeApiService: AnimeApiService = AnimeApiService.create(),
-    private val bangumiApiService: BangumiApiService = RetrofitClient.bangumiApiService,
 ) : AnimeRepository {
 
     private fun safeLogE(tag: String, msg: String, tr: Throwable? = null) {
@@ -32,160 +24,61 @@ class AnimeRepositoryImpl(
 
     override fun getSchedules(filter: String?): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
-        var animeList: List<Anime>? = null
-
-        // 1. Primary: AnOtaku API
         try {
-            val dayEnglish = mapPortugueseDayToEnglishFilter(filter)
-            val response = anOtakuApiService.getSchedule(day = dayEnglish)
+            val response = anitakuApiService.getTopAiring()
             if (response.isSuccessful) {
-                val rawList = response.body()?.data ?: emptyList()
-                val mapped = rawList
-                    .filter { it.isAdult != true }
-                    .map { it.toDomain() }
+                val results = response.body()?.results ?: emptyList()
+                var animeList = results.map { it.toDomain() }
 
-                if (mapped.isNotEmpty()) {
-                    animeList = if (!filter.isNullOrBlank()) {
-                        val normalizedFilter = filter.trim().lowercase()
-                        mapped.filter { it.airingDay.lowercase() == normalizedFilter }
-                    } else mapped
+                if (!filter.isNullOrBlank()) {
+                    val normalizedFilter = filter.trim().lowercase()
+                    animeList = animeList.filter { it.airingDay.lowercase() == normalizedFilter }
+                }
+
+                emit(Resource.Success(animeList))
+            } else {
+                val recentResponse = anitakuApiService.getRecentEpisodes()
+                if (recentResponse.isSuccessful) {
+                    val results = recentResponse.body()?.results ?: emptyList()
+                    emit(Resource.Success(results.map { it.toDomain() }))
+                } else {
+                    emit(Resource.Error("Erro ao carregar programação: HTTP ${response.code()}"))
                 }
             }
         } catch (e: Exception) {
-            safeLogE("AnimeRepository", "AnOtaku API schedule failed: ${e.message}", e)
-        }
-
-        // 2. Anitaku / api-anfi Wrapper
-        if (animeList.isNullOrEmpty()) {
-            try {
-                val response = anitakuApiService.getRecentEpisodes()
-                if (response.isSuccessful) {
-                    val rawList = response.body()?.results ?: emptyList()
-                    val mapped = rawList.map { it.toDomain() }
-                    if (mapped.isNotEmpty()) {
-                        animeList = mapped
-                    }
-                }
-            } catch (e: Exception) {
-                safeLogE("AnimeRepository", "Anitaku wrapper failed: ${e.message}", e)
-            }
-        }
-
-        // 3. Fallback: Jikan API
-        if (animeList.isNullOrEmpty()) {
-            try {
-                val dayEnglish = mapPortugueseDayToEnglishFilter(filter)
-                val response = if (dayEnglish != null) {
-                    animeApiService.getDailySchedule(day = dayEnglish, type = "tv")
-                } else {
-                    animeApiService.getCurrentSeasonAnime(filter = "tv")
-                }
-                val rawList = response.data ?: emptyList()
-                val mapped = rawList
-                    .filter { (it.airing == true || it.status.equals("Currently Airing", ignoreCase = true)) && !it.rating.orEmpty().contains("Rx", ignoreCase = true) }
-                    .map { it.toDomain(overrideDay = filter) }
-
-                if (mapped.isNotEmpty()) {
-                    animeList = mapped
-                }
-            } catch (e: Exception) {
-                safeLogE("AnimeRepository", "Jikan API fallback failed: ${e.message}", e)
-            }
-        }
-
-        if (!animeList.isNullOrEmpty()) {
-            emit(Resource.Success(animeList))
-        } else {
-            emit(Resource.Error("Erro ao carregar programação. Verifique sua conexão e tente novamente."))
+            safeLogE("AnimeRepository", "Erro ao carregar programação Anitaku: ${e.message}", e)
+            emit(Resource.Error("Erro ao carregar programação: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
 
     override fun getPopularAnime(): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
-        var animeList: List<Anime>? = null
-
-        // Primary: AnOtaku API
         try {
-            val response = anOtakuApiService.getPopularAnime()
+            val response = anitakuApiService.getPopular()
             if (response.isSuccessful) {
-                val rawList = response.body()?.data ?: emptyList()
-                val mapped = rawList
-                    .filter { it.isAdult != true }
-                    .map { it.toDomain() }
-                if (mapped.isNotEmpty()) {
-                    animeList = mapped
-                }
+                val results = response.body()?.results ?: emptyList()
+                emit(Resource.Success(results.map { it.toDomain() }))
+            } else {
+                emit(Resource.Error("Erro ao carregar animes populares"))
             }
         } catch (e: Exception) {
-            safeLogE("AnimeRepository", "AnOtaku popular failed: ${e.message}", e)
-        }
-
-        // Anitaku Wrapper Popular
-        if (animeList.isNullOrEmpty()) {
-            try {
-                val response = anitakuApiService.getPopular()
-                if (response.isSuccessful) {
-                    val rawList = response.body()?.results ?: emptyList()
-                    val mapped = rawList.map { it.toDomain() }
-                    if (mapped.isNotEmpty()) {
-                        animeList = mapped
-                    }
-                }
-            } catch (e: Exception) {
-                safeLogE("AnimeRepository", "Anitaku popular failed: ${e.message}", e)
-            }
-        }
-
-        // Fallback: Jikan API
-        if (animeList.isNullOrEmpty()) {
-            try {
-                val response = animeApiService.getPopularAnimes(type = "tv")
-                val rawList = response.data ?: emptyList()
-                val mapped = rawList
-                    .filter { !it.rating.orEmpty().contains("Rx", ignoreCase = true) }
-                    .map { it.toDomain() }
-                if (mapped.isNotEmpty()) {
-                    animeList = mapped
-                }
-            } catch (e: Exception) {
-                safeLogE("AnimeRepository", "Jikan popular fallback failed: ${e.message}", e)
-            }
-        }
-
-        if (!animeList.isNullOrEmpty()) {
-            emit(Resource.Success(animeList))
-        } else {
-            emit(Resource.Error("Erro ao carregar animes populares"))
+            safeLogE("AnimeRepository", "Erro populares Anitaku: ${e.message}", e)
+            emit(Resource.Error("Erro ao carregar animes populares: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
 
     override fun searchAnime(query: String, genre: String?): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
         try {
-            val response = anOtakuApiService.searchAnime(query = query)
+            val response = anitakuApiService.search(query = query)
             if (response.isSuccessful) {
-                val rawList = response.body()?.data ?: emptyList()
-                val mapped = rawList
-                    .filter { it.isAdult != true }
-                    .map { it.toDomain() }
-                emit(Resource.Success(mapped))
+                val results = response.body()?.results ?: emptyList()
+                emit(Resource.Success(results.map { it.toDomain() }))
             } else {
-                val anitakuResponse = anitakuApiService.search(query = query)
-                if (anitakuResponse.isSuccessful) {
-                    val rawList = anitakuResponse.body()?.results ?: emptyList()
-                    val mapped = rawList.map { it.toDomain() }
-                    emit(Resource.Success(mapped))
-                } else {
-                    val fallbackResponse = animeApiService.searchAnimes(query = query, type = "tv")
-                    val rawList = fallbackResponse.data ?: emptyList()
-                    val mapped = rawList
-                        .filter { !it.rating.orEmpty().contains("Rx", ignoreCase = true) }
-                        .map { it.toDomain() }
-                    emit(Resource.Success(mapped))
-                }
+                emit(Resource.Error("Erro na busca"))
             }
         } catch (e: Exception) {
-            safeLogE("AnimeRepository", "Erro na busca: ${e.message}", e)
+            safeLogE("AnimeRepository", "Erro na busca Anitaku: ${e.message}", e)
             emit(Resource.Error("Erro na busca: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
@@ -193,26 +86,22 @@ class AnimeRepositoryImpl(
     override fun getAnimeDetails(id: Int): Flow<Resource<Anime>> = flow {
         emit(Resource.Loading)
         try {
-            val response = anOtakuApiService.getPopularAnime()
-            if (response.isSuccessful) {
-                val rawList = response.body()?.data ?: emptyList()
-                val item = rawList.firstOrNull { it.id.hashCode() == id }
-                if (item != null) {
-                    emit(Resource.Success(item.toDomain()))
+            val popularResp = anitakuApiService.getPopular()
+            val results = popularResp.body()?.results ?: emptyList()
+            val match = results.firstOrNull { it.id.hashCode() == id }
+            if (match != null) {
+                val infoResp = anitakuApiService.getInfo(match.id)
+                val info = infoResp.body()
+                if (info != null) {
+                    emit(Resource.Success(info.toDomain()))
                 } else {
-                    val jikanResponse = animeApiService.getAnimeDetails(animeId = id)
-                    val model = jikanResponse.data
-                    if (model != null) {
-                        emit(Resource.Success(model.toDomain()))
-                    } else {
-                        emit(Resource.Error("Detalhes do anime não encontrados"))
-                    }
+                    emit(Resource.Success(match.toDomain()))
                 }
             } else {
-                emit(Resource.Error("Erro ao carregar detalhes"))
+                emit(Resource.Error("Detalhes do anime não encontrados"))
             }
         } catch (e: Exception) {
-            safeLogE("AnimeRepository", "Erro nos detalhes: ${e.message}", e)
+            safeLogE("AnimeRepository", "Erro nos detalhes Anitaku: ${e.message}", e)
             emit(Resource.Error("Erro ao carregar detalhes: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)

@@ -1,83 +1,71 @@
 package agenda.de.myapplicationanim1
 
 import agenda.de.myapplicationanim1.data.model.Anime
-import agenda.de.myapplicationanim1.data.model.AnimeDetailResponse
-import agenda.de.myapplicationanim1.data.model.AnimeListResponse
-import agenda.de.myapplicationanim1.data.model.AnimeModel
-import agenda.de.myapplicationanim1.data.model.ImageWrapper
-import agenda.de.myapplicationanim1.data.model.ImageType
-import agenda.de.myapplicationanim1.data.model.JikanBroadcastInfo
-import agenda.de.myapplicationanim1.data.model.StreamingLinksResponse
-import agenda.de.myapplicationanim1.data.model.StreamingPlatform
+import agenda.de.myapplicationanim1.data.model.AnitakuAnimeItem
+import agenda.de.myapplicationanim1.data.model.AnitakuInfoResponse
+import agenda.de.myapplicationanim1.data.model.AnitakuResponse
 import agenda.de.myapplicationanim1.data.model.toDomain
-import agenda.de.myapplicationanim1.data.remote.AnimeApiService
+import agenda.de.myapplicationanim1.data.remote.AnitakuApiService
 import agenda.de.myapplicationanim1.data.repository.AnimeRepositoryImpl
 import agenda.de.myapplicationanim1.data.util.Resource
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import retrofit2.Response
 
 class AnimeRepositoryTest {
 
     @Test
-    fun animeModel_getDisplayName_and_getImageUrl_isCorrect() {
-        val model = AnimeModel(
-            id = 1,
-            title = "Jap Title",
-            titleEnglish = "English Title",
-            images = ImageWrapper(jpg = ImageType(imageUrl = "http://example.com/small.jpg", largeImageUrl = "http://example.com/large.jpg")),
-            broadcast = JikanBroadcastInfo(day = "Mondays", time = "12:00", timezone = "JST", fullBroadcast = "Mondays at 12:00"),
-            rating = "PG-13",
-            streaming = listOf(StreamingPlatform(name = "Crunchyroll")),
-            airing = true
+    fun anitakuAnimeItem_toDomain_mapping_isCorrect() {
+        val item = AnitakuAnimeItem(
+            id = "naruto",
+            title = "Naruto",
+            image = "http://example.com/cover.jpg",
+            episodeNumber = 220,
+            releaseDate = "2002",
+            status = "Completed"
         )
 
-        assertEquals("English Title", model.getDisplayName())
-        assertEquals("http://example.com/large.jpg", model.getImageUrl())
+        val domain = item.toDomain()
 
-        val domain = model.toDomain(listOf("Crunchyroll"))
-        assertEquals("English Title", domain.title)
-        assertEquals("Segunda", domain.airingDay)
+        assertEquals("Naruto", domain.title)
+        assertEquals("http://example.com/cover.jpg", domain.imageUrl)
+        assertEquals(220, domain.episodes)
     }
 
     @Test
-    fun getSchedules_returnsFilteredAnimes() = runTest {
-        val fakeApi = object : AnimeApiService {
-            override suspend fun getCurrentSeasonAnime(filter: String?, page: Int): AnimeListResponse {
-                return AnimeListResponse(
-                    data = listOf(
-                        AnimeModel(
-                            id = 101,
-                            title = "Solo Leveling",
-                            titleEnglish = "Solo Leveling",
-                            images = ImageWrapper(jpg = ImageType(imageUrl = "http://example.com/solo.jpg", largeImageUrl = "http://example.com/solo.jpg")),
-                            broadcast = JikanBroadcastInfo(day = "Mondays", time = "12:00", timezone = "JST", fullBroadcast = "Mondays at 12:00"),
-                            rating = "PG-13",
-                            streaming = listOf(StreamingPlatform(name = "Crunchyroll")),
-                            airing = true
+    fun getSchedules_returnsAnitakuAnimes() = runTest {
+        val fakeAnitakuApi = object : AnitakuApiService {
+            override suspend fun getRecentEpisodes(page: Int) = Response.success(AnitakuResponse())
+            override suspend fun getTopAiring(page: Int): Response<AnitakuResponse> {
+                return Response.success(
+                    AnitakuResponse(
+                        results = listOf(
+                            AnitakuAnimeItem(
+                                id = "naruto",
+                                title = "Naruto",
+                                image = "http://example.com/cover.jpg",
+                                episodeNumber = 220,
+                                releaseDate = "2002",
+                                status = "RELEASING"
+                            )
                         )
                     )
                 )
             }
-
-            override suspend fun getDailySchedule(day: String?, type: String?): AnimeListResponse {
-                return getCurrentSeasonAnime("tv", 1)
-            }
-
-            override suspend fun getPopularAnimes(filter: String, type: String?, page: Int) = AnimeListResponse()
-            override suspend fun getAnimeStreamingPlatforms(animeId: Int) = StreamingLinksResponse()
-            override suspend fun getAnimeDetails(animeId: Int) = AnimeDetailResponse()
-            override suspend fun searchAnimes(query: String, type: String?) = AnimeListResponse()
+            override suspend fun getPopular(page: Int) = Response.success(AnitakuResponse())
+            override suspend fun search(query: String) = Response.success(AnitakuResponse())
+            override suspend fun getInfo(id: String) = Response.success(AnitakuInfoResponse(id = id, title = "Naruto"))
         }
 
-        val repository = AnimeRepositoryImpl(animeApiService = fakeApi)
+        val repository = AnimeRepositoryImpl(anitakuApiService = fakeAnitakuApi)
         val results = mutableListOf<Resource<List<Anime>>>()
         repository.getSchedules("Segunda").collect { results.add(it) }
 
         assertTrue(results.any { it is Resource.Success })
         val successRes = results.first { it is Resource.Success } as Resource.Success
         assertEquals(1, successRes.data.size)
-        assertEquals("Solo Leveling", successRes.data[0].title)
+        assertEquals("Naruto", successRes.data[0].title)
     }
 }
