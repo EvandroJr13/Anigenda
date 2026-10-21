@@ -3,6 +3,7 @@ package agenda.de.myapplicationanim1
 import agenda.de.myapplicationanim1.data.model.AniListData
 import agenda.de.myapplicationanim1.data.model.AniListResponse
 import agenda.de.myapplicationanim1.data.model.Anime
+import agenda.de.myapplicationanim1.data.model.BangumiDataResponse
 import agenda.de.myapplicationanim1.data.model.BangumiItemDto
 import agenda.de.myapplicationanim1.data.model.CoverImageDto
 import agenda.de.myapplicationanim1.data.model.MediaDto
@@ -51,7 +52,7 @@ class AnimeRepositoryTest {
     @Test
     fun getSchedules_fallsBackToAniList_whenBangumiFails() = runTest {
         val fakeBangumiApi = object : BangumiApiService {
-            override suspend fun getItems() = Response.error<List<BangumiItemDto>>(404, "Not Found".toResponseBody("text/plain".toMediaType()))
+            override suspend fun getItems() = Response.error<BangumiDataResponse>(404, "Not Found".toResponseBody("text/plain".toMediaType()))
         }
 
         val cal = java.util.Calendar.getInstance().apply {
@@ -101,7 +102,7 @@ class AnimeRepositoryTest {
     @Test
     fun getSchedules_fallsBackToEmptyList_whenBothFail() = runTest {
         val fakeBangumiApi = object : BangumiApiService {
-            override suspend fun getItems() = Response.error<List<BangumiItemDto>>(404, "Not Found".toResponseBody("text/plain".toMediaType()))
+            override suspend fun getItems() = Response.error<BangumiDataResponse>(404, "Not Found".toResponseBody("text/plain".toMediaType()))
         }
         val fakeAniListApi = object : AniListApiService {
             override suspend fun graphqlQuery(body: Map<String, Any>): Response<AniListResponse> {

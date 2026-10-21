@@ -71,7 +71,7 @@ class AnimeRepositoryImpl(
         try {
             val response = bangumiApiService.getItems()
             if (response.isSuccessful) {
-                val items = response.body() ?: emptyList()
+                val items = response.body()?.items ?: emptyList()
                 val mapped = items.map { it.toDomain() }
                 if (mapped.isNotEmpty()) {
                     animeList = mapped

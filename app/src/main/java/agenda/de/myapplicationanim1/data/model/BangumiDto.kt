@@ -5,6 +5,11 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 @JsonClass(generateAdapter = true)
+data class BangumiDataResponse(
+    val items: List<BangumiItemDto>? = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
 data class BangumiItemDto(
     val id: String?,
     val title: String?,
