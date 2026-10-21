@@ -13,15 +13,16 @@ data class BangumiDataResponse(
 data class BangumiItemDto(
     val id: String?,
     val title: String?,
+    val titleTranslate: Map<String, List<String>>? = null,
     val type: String?,
     val lang: String?,
     val officialSite: String?,
     val begin: String?,
     val broadcast: String?,
     val weekDay: Int?,
-    val sites: List<BangumiSiteDto>?,
-    val image: String?,
-    val summary: String?
+    val sites: List<BangumiSiteDto>? = null,
+    val image: String? = null,
+    val summary: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -33,9 +34,18 @@ data class BangumiSiteDto(
 )
 
 fun BangumiItemDto.toDomain(): Anime {
-    val titleStr = title ?: "Desconhecido"
+    val englishTitle = titleTranslate?.get("en")?.firstOrNull { it.isNotBlank() }
+    val titleStr = englishTitle ?: title ?: "Desconhecido"
     val numericId = id?.hashCode() ?: titleStr.hashCode()
-    val imgUrl = image ?: ""
+
+    val bangumiSite = sites?.firstOrNull { it.site == "bangumi" }
+    val bangumiId = bangumiSite?.id?.toString()
+
+    val imgUrl = when {
+        !image.isNullOrBlank() -> image
+        !bangumiId.isNullOrBlank() -> "https://api.bgm.tv/v0/subjects/$bangumiId/image?type=large"
+        else -> ""
+    }
 
     val dayOfWeekPt = when (weekDay) {
         1 -> "Segunda"
@@ -56,9 +66,10 @@ fun BangumiItemDto.toDomain(): Anime {
     return Anime(
         id = numericId,
         title = titleStr,
-        titleRomaji = titleStr,
-        titleEnglish = titleStr,
-        titleJapanese = titleStr,
+        titleRomaji = title ?: titleStr,
+        titleEnglish = englishTitle ?: titleStr,
+        titleNative = title ?: "",
+        titleJapanese = title ?: "",
         imageUrl = imgUrl,
         largeImageUrl = imgUrl,
         synopsis = synopsisText,
