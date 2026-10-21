@@ -143,3 +143,39 @@ fun MediaDto.toDomain(): Anime {
         )
     }
 }
+
+fun AnimeDto.toDomain(): Anime {
+    val bestTitle = titleEnglish?.ifEmpty { title } ?: title ?: "Unknown Title"
+    val imgUrl = images?.jpg?.largeImageUrl ?: images?.jpg?.imageUrl ?: ""
+    val studioList = studios?.mapNotNull { it.name } ?: emptyList()
+    val genreList = genres?.mapNotNull { it.name } ?: emptyList()
+    val broadcastDay = broadcast?.day ?: ""
+    val broadcastTime = broadcast?.time ?: ""
+    
+    return Anime(
+        id = malId ?: 0,
+        title = bestTitle,
+        titleRomaji = title ?: "",
+        titleEnglish = titleEnglish ?: "",
+        titleNative = titleJapanese ?: "",
+        titleJapanese = titleJapanese ?: "",
+        imageUrl = imgUrl,
+        largeImageUrl = imgUrl,
+        synopsis = synopsis ?: "No synopsis available.",
+        score = score ?: 0.0,
+        episodes = episodes ?: 0,
+        status = status ?: "RELEASING",
+        aired = aired?.string ?: "",
+        broadcast = BroadcastInfo(
+            day = broadcastDay,
+            time = broadcastTime,
+            timezone = "JST",
+            stringFormat = broadcast?.string ?: ""
+        ),
+        genres = genreList,
+        studios = studioList,
+        airingDay = broadcastDay.ifEmpty { "Segunda" },
+        nextAiringEpisode = null,
+        externalLinks = emptyList()
+    )
+}

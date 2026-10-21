@@ -110,4 +110,13 @@ object RetrofitClient {
             .build()
             .create(BangumiApiService::class.java)
     }
+
+    val jikanApiService: JikanApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://api.jikan.moe/v4/")
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+            .create(JikanApiService::class.java)
+    }
 }

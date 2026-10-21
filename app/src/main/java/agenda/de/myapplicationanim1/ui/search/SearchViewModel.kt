@@ -3,7 +3,6 @@ package agenda.de.myapplicationanim1.ui.search
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import agenda.de.myapplicationanim1.data.model.Anime
-import agenda.de.myapplicationanim1.data.remote.RetrofitClient
 import agenda.de.myapplicationanim1.data.repository.AnimeRepository
 import agenda.de.myapplicationanim1.data.repository.AnimeRepositoryImpl
 import agenda.de.myapplicationanim1.data.util.Resource
@@ -15,7 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class SearchViewModel(
-    private val repository: AnimeRepository = AnimeRepositoryImpl(RetrofitClient.aniListApiService),
+    private val repository: AnimeRepository = AnimeRepositoryImpl(),
 ) : ViewModel() {
 
     private val _query = MutableStateFlow("")

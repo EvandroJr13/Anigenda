@@ -89,12 +89,6 @@ dependencies {
     implementation("com.google.firebase:firebase-appdistribution-api-ktx:16.0.0-beta15")
     implementation("com.google.firebase:firebase-appdistribution:16.0.0-beta21")
     implementation("com.google.android.gms:play-services-ads:23.6.0")
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-firestore-ktx")
-    implementation("com.google.firebase:firebase-storage-ktx")
-    implementation("com.google.firebase:firebase-messaging-ktx")
-    implementation("androidx.media3:media3-exoplayer:1.5.1")
-    implementation("androidx.media3:media3-ui:1.5.1")
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

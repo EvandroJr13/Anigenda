@@ -6,7 +6,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import agenda.de.myapplicationanim1.data.remote.RetrofitClient
 import agenda.de.myapplicationanim1.data.repository.AnimeRepository
 import agenda.de.myapplicationanim1.data.repository.AnimeRepositoryImpl
 import agenda.de.myapplicationanim1.data.util.NotificationPreferences
@@ -32,7 +31,7 @@ enum class AppThemeMode(val title: String, val defaultBgHex: String) {
 
 class SettingsViewModel @JvmOverloads constructor(
     application: Application,
-    private val repository: AnimeRepository = AnimeRepositoryImpl(RetrofitClient.aniListApiService)
+    private val repository: AnimeRepository = AnimeRepositoryImpl()
 ) : AndroidViewModel(application) {
 
     private val themePrefs = ThemePreferences(application)

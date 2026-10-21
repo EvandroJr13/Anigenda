@@ -3,7 +3,6 @@ package agenda.de.myapplicationanim1.ui.popular
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import agenda.de.myapplicationanim1.data.model.Anime
-import agenda.de.myapplicationanim1.data.remote.RetrofitClient
 import agenda.de.myapplicationanim1.data.repository.AnimeRepository
 import agenda.de.myapplicationanim1.data.repository.AnimeRepositoryImpl
 import agenda.de.myapplicationanim1.data.util.Resource
@@ -20,7 +19,7 @@ sealed interface PopularUiState {
 }
 
 class PopularViewModel(
-    private val repository: AnimeRepository = AnimeRepositoryImpl(RetrofitClient.aniListApiService),
+    private val repository: AnimeRepository = AnimeRepositoryImpl(),
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<PopularUiState>(PopularUiState.Loading)
