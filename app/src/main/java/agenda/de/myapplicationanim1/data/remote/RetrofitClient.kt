@@ -43,8 +43,11 @@ class UserAgentInterceptor : Interceptor {
         val originalRequest = chain.request()
         val newRequest = originalRequest.newBuilder()
             .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36")
-            .header("Accept", "application/json")
+            .header("Accept", "application/json, text/plain, */*")
+            .header("Accept-Language", "en-US,en;q=0.9,pt-BR;q=0.8,pt;q=0.7")
             .header("Content-Type", "application/json")
+            .header("Origin", "https://anilist.co")
+            .header("Referer", "https://anilist.co/")
             .build()
         return chain.proceed(newRequest)
     }
