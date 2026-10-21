@@ -45,7 +45,7 @@ class AnimeRepositoryTest {
     @Test
     fun getSchedules_returnsKitsuAnimes() = runTest {
         val fakeKitsuApi = object : KitsuApiService {
-            override suspend fun getCurrentlyAiringAnime(status: String, limit: Int, sort: String): Response<KitsuAnimeListResponse> {
+            override suspend fun getCurrentlyAiringAnime(): Response<KitsuAnimeListResponse> {
                 return Response.success(
                     KitsuAnimeListResponse(
                         data = listOf(

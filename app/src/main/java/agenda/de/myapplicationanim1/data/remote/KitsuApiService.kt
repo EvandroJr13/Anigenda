@@ -12,18 +12,14 @@ import retrofit2.http.Query
 interface KitsuApiService {
 
     // Currently airing / releasing animes
-    @GET("anime")
-    suspend fun getCurrentlyAiringAnime(
-        @Query("filter[status]") status: String = "current",
-        @Query("page[limit]") limit: Int = 50,
-        @Query("sort") sort: String = "-userCount"
-    ): Response<KitsuAnimeListResponse>
+    @GET("anime?filter[status]=current&page[limit]=20&sort=-userCount")
+    suspend fun getCurrentlyAiringAnime(): Response<KitsuAnimeListResponse>
 
     // Search anime by text
     @GET("anime")
     suspend fun searchAnime(
-        @Query("filter[text]") query: String,
-        @Query("page[limit]") limit: Int = 50
+        @Query(value = "filter[text]", encoded = true) query: String,
+        @Query("page[limit]") limit: Int = 20
     ): Response<KitsuAnimeListResponse>
 
     // Get single anime details
@@ -46,7 +42,7 @@ interface KitsuApiService {
                 .addInterceptor { chain ->
                     val original = chain.request()
                     val request = original.newBuilder()
-                        .header("User-Agent", "AnimeScheduleApp/1.0 (evandro@animeschedule.app)")
+                        .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36")
                         .header("Accept", "application/vnd.api+json")
                         .header("Content-Type", "application/vnd.api+json")
                         .build()

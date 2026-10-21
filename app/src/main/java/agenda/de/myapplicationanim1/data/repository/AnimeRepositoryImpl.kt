@@ -25,11 +25,11 @@ class AnimeRepositoryImpl(
     override fun getSchedules(filter: String?): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
         try {
-            val response = kitsuApiService.getCurrentlyAiringAnime(status = "current", limit = 50)
+            val response = kitsuApiService.getCurrentlyAiringAnime()
             if (response.isSuccessful) {
                 val kitsuList = response.body()?.data ?: emptyList()
                 var animeList = kitsuList
-                    .filter { it.attributes?.nsfw != true && it.attributes?.status == "current" }
+                    .filter { it.attributes?.nsfw != true }
                     .map { it.toDomain() }
 
                 if (!filter.isNullOrBlank()) {
@@ -50,7 +50,7 @@ class AnimeRepositoryImpl(
     override fun getPopularAnime(): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
         try {
-            val response = kitsuApiService.getCurrentlyAiringAnime(status = "current", limit = 24)
+            val response = kitsuApiService.getCurrentlyAiringAnime()
             if (response.isSuccessful) {
                 val kitsuList = response.body()?.data ?: emptyList()
                 val animeList = kitsuList
