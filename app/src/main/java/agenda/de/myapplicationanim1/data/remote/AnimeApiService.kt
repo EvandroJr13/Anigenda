@@ -14,22 +14,19 @@ interface AnimeApiService {
     // 1. Current Season Anime
     @GET("seasons/now")
     suspend fun getCurrentSeasonAnime(
-        @Query("sfw") sfw: Boolean = true,
         @Query("page") page: Int = 1
     ): AnimeListResponse
 
     // 2. Animes do Dia / Calendário de Lançamentos
     @GET("schedules")
     suspend fun getDailySchedule(
-        @Query("filter") day: String? = null, // Ex: "monday", "tuesday". Se nulo, traz o dia atual
-        @Query("sfw") sfw: Boolean = true     // Filtra conteúdo adulto (Explicit/Hentai)
+        @Query("filter") day: String? = null // Ex: "monday", "tuesday". Se nulo, traz o dia atual
     ): AnimeListResponse
 
     // 3. Animes Mais Populares
     @GET("top/anime")
     suspend fun getPopularAnimes(
         @Query("filter") filter: String = "bypopularity",
-        @Query("sfw") sfw: Boolean = true,
         @Query("page") page: Int = 1
     ): AnimeListResponse
 
@@ -48,8 +45,7 @@ interface AnimeApiService {
     // 6. Busca de animes por texto
     @GET("anime")
     suspend fun searchAnimes(
-        @Query("q") query: String,
-        @Query("sfw") sfw: Boolean = true
+        @Query("q") query: String
     ): AnimeListResponse
 
     companion object {

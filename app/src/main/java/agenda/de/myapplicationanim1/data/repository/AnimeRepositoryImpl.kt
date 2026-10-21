@@ -3,6 +3,7 @@ package agenda.de.myapplicationanim1.data.repository
 import android.util.Log
 import agenda.de.myapplicationanim1.data.model.Anime
 import agenda.de.myapplicationanim1.data.model.AnimeModel
+import agenda.de.myapplicationanim1.data.model.isExplicitHentai
 import agenda.de.myapplicationanim1.data.model.isMatureContent
 import agenda.de.myapplicationanim1.data.model.mapPortugueseDayToEnglishFilter
 import agenda.de.myapplicationanim1.data.model.toDomain
@@ -38,9 +39,9 @@ class AnimeRepositoryImpl(
         try {
             val dayEnglish = mapPortugueseDayToEnglishFilter(filter)
             val response = if (dayEnglish != null) {
-                animeApiService.getDailySchedule(day = dayEnglish, sfw = true)
+                animeApiService.getDailySchedule(day = dayEnglish)
             } else {
-                animeApiService.getCurrentSeasonAnime(sfw = true)
+                animeApiService.getCurrentSeasonAnime()
             }
             val rawList = response.data ?: emptyList()
             val filtered = processAndFilterAnimes(rawList, filter)
@@ -108,7 +109,7 @@ class AnimeRepositoryImpl(
 
         // Tier 1: Try Jikan API
         try {
-            val response = animeApiService.getPopularAnimes(sfw = true)
+            val response = animeApiService.getPopularAnimes()
             val rawList = response.data ?: emptyList()
             val filtered = processAndFilterAnimes(rawList)
             if (filtered.isNotEmpty()) {
@@ -147,7 +148,7 @@ class AnimeRepositoryImpl(
     override fun searchAnime(query: String, genre: String?): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
         try {
-            val response = animeApiService.searchAnimes(query = query, sfw = true)
+            val response = animeApiService.searchAnimes(query = query)
             val rawList = response.data ?: emptyList()
             val filteredDomainList = processAndFilterAnimes(rawList)
             emit(Resource.Success(filteredDomainList))
@@ -222,15 +223,11 @@ class AnimeRepositoryImpl(
                     anime.status.equals("RELEASING", ignoreCase = true)
             if (!isCurrentlyAiring) continue
 
-            val rating = anime.rating ?: ""
-            val isMature = rating.contains("Rx", ignoreCase = true) ||
-                    rating.contains("Hentai", ignoreCase = true)
-            if (isMature) continue
+            // Filter ONLY explicit Hentai/Rx, keeping all standard/regular anime shows
+            if (anime.isExplicitHentai()) continue
 
-            val domainAnime = anime.toDomain()
-            if (dayFilter.isNullOrBlank() || domainAnime.airingDay.lowercase() == dayFilter.trim().lowercase()) {
-                filteredResult.add(domainAnime)
-            }
+            val domainAnime = anime.toDomain(overrideDay = dayFilter)
+            filteredResult.add(domainAnime)
         }
 
         return filteredResult

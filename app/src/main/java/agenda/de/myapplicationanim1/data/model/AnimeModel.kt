@@ -36,6 +36,11 @@ data class AnimeModel(
     fun getImageUrl(): String? = images?.jpg?.largeImageUrl ?: images?.jpg?.imageUrl
 }
 
+fun AnimeModel.isExplicitHentai(): Boolean {
+    val r = rating ?: ""
+    return r.contains("Rx", ignoreCase = true) || r.contains("Hentai", ignoreCase = true)
+}
+
 data class ImageWrapper(
     @SerializedName("jpg") val jpg: ImageType?
 )
@@ -57,7 +62,7 @@ data class StreamingPlatform(
     @SerializedName("url") val url: String? = null
 )
 
-fun AnimeModel.toDomain(matchedPlatforms: List<String> = emptyList()): Anime {
+fun AnimeModel.toDomain(matchedPlatforms: List<String> = emptyList(), overrideDay: String? = null): Anime {
     val titleEng = getDisplayName()
     val imgUrl = getImageUrl() ?: ""
     val dayStr = broadcast?.day ?: "Segunda"
@@ -67,7 +72,7 @@ fun AnimeModel.toDomain(matchedPlatforms: List<String> = emptyList()): Anime {
     val streamingLinks = (streaming?.map { ExternalLinkInfo(site = it.name, url = it.url ?: "") } ?: emptyList()) +
             matchedPlatforms.map { ExternalLinkInfo(site = it, url = "") }
 
-    val ptDay = mapEnglishDayToPortuguese(dayStr)
+    val ptDay = overrideDay?.takeIf { it.isNotBlank() } ?: mapEnglishDayToPortuguese(dayStr)
 
     return Anime(
         id = id,
