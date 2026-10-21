@@ -4,12 +4,8 @@ import android.util.Log
 import agenda.de.myapplicationanim1.data.model.Anime
 import agenda.de.myapplicationanim1.data.model.BroadcastInfo
 import agenda.de.myapplicationanim1.data.model.ExternalLinkInfo
-import agenda.de.myapplicationanim1.data.model.isMatureContent
 import agenda.de.myapplicationanim1.data.model.toDomain
-import agenda.de.myapplicationanim1.data.remote.AnimeApiService
 import agenda.de.myapplicationanim1.data.remote.AnitakuApiService
-import agenda.de.myapplicationanim1.data.remote.BangumiApiService
-import agenda.de.myapplicationanim1.data.remote.RetrofitClient
 import agenda.de.myapplicationanim1.data.util.Resource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -18,8 +14,6 @@ import kotlinx.coroutines.flow.flowOn
 
 class AnimeRepositoryImpl(
     private val anitakuApiService: AnitakuApiService = AnitakuApiService.create(),
-    private val animeApiService: AnimeApiService = AnimeApiService.create(),
-    private val bangumiApiService: BangumiApiService = RetrofitClient.bangumiApiService,
 ) : AnimeRepository {
 
     private fun safeLogE(tag: String, msg: String, tr: Throwable? = null) {
@@ -34,7 +28,7 @@ class AnimeRepositoryImpl(
         emit(Resource.Loading)
         var animeList: List<Anime>? = null
 
-        // 1. Try Anitaku API (gogoanime-api-eta.vercel.app)
+        // Try Anitaku API exclusively (English titles from Gogoanime/Anitaku)
         try {
             val response = anitakuApiService.getTopAiring()
             if (response.isSuccessful) {
@@ -51,45 +45,26 @@ class AnimeRepositoryImpl(
             safeLogE("AnimeRepository", "Anitaku top-airing failed: ${e.message}", e)
         }
 
-        // 2. Fallback to Jikan API v4 if Anitaku returned 500 or failed
         if (animeList.isNullOrEmpty()) {
             try {
-                val response = animeApiService.getCurrentSeasonAnime(filter = "tv")
-                val rawList = response.data ?: emptyList()
-                val mapped = rawList
-                    .filter { !it.rating.orEmpty().contains("Rx", ignoreCase = true) }
-                    .map { it.toDomain(overrideDay = filter) }
-                if (mapped.isNotEmpty()) {
-                    animeList = mapped
-                }
-            } catch (e: Exception) {
-                safeLogE("AnimeRepository", "Jikan API fallback failed: ${e.message}", e)
-            }
-        }
-
-        // 3. Fallback to Bangumi Data CDN if Jikan failed
-        if (animeList.isNullOrEmpty()) {
-            try {
-                val bangumiResponse = bangumiApiService.getItems()
-                if (bangumiResponse.isSuccessful) {
-                    val items = bangumiResponse.body()?.items ?: emptyList()
-                    var mapped = items.filter { !it.isMatureContent() }.map { it.toDomain() }
-                    if (!filter.isNullOrBlank()) {
-                        val normalizedFilter = filter.trim().lowercase()
-                        mapped = mapped.filter { it.airingDay.lowercase() == normalizedFilter }
-                    }
+                val response = anitakuApiService.getRecentEpisodes()
+                if (response.isSuccessful) {
+                    val results = response.body()?.results ?: emptyList()
+                    val mapped = results.map { it.toDomain() }
                     if (mapped.isNotEmpty()) {
-                        animeList = mapped
+                        animeList = if (!filter.isNullOrBlank()) {
+                            val normalizedFilter = filter.trim().lowercase()
+                            mapped.filter { it.airingDay.lowercase() == normalizedFilter || it.airingDay.isEmpty() }
+                        } else mapped
                     }
                 }
             } catch (e: Exception) {
-                safeLogE("AnimeRepository", "Bangumi CDN fallback failed: ${e.message}", e)
+                safeLogE("AnimeRepository", "Anitaku recent episodes failed: ${e.message}", e)
             }
         }
 
-        // 4. Guaranteed Offline / Mock Fallback list so app NEVER shows HTTP 500 or empty screen
-        val finalList = animeList ?: getFallbackAnimeList(filter)
-
+        // Guaranteed English/Portuguese Curated Fallback list
+        val finalList = animeList.takeIf { !it.isNullOrEmpty() } ?: getFallbackAnimeList(filter)
         emit(Resource.Success(finalList))
     }.flowOn(Dispatchers.IO)
 
@@ -108,18 +83,7 @@ class AnimeRepositoryImpl(
             safeLogE("AnimeRepository", "Anitaku popular failed: ${e.message}", e)
         }
 
-        if (animeList.isNullOrEmpty()) {
-            try {
-                val response = animeApiService.getPopularAnimes(type = "tv")
-                val rawList = response.data ?: emptyList()
-                val mapped = rawList.map { it.toDomain() }
-                if (mapped.isNotEmpty()) animeList = mapped
-            } catch (e: Exception) {
-                safeLogE("AnimeRepository", "Jikan popular failed: ${e.message}", e)
-            }
-        }
-
-        val finalPopular = animeList ?: getFallbackAnimeList(null)
+        val finalPopular = animeList.takeIf { !it.isNullOrEmpty() } ?: getFallbackAnimeList(null)
         emit(Resource.Success(finalPopular))
     }.flowOn(Dispatchers.IO)
 
@@ -131,12 +95,10 @@ class AnimeRepositoryImpl(
                 val results = response.body()?.results ?: emptyList()
                 emit(Resource.Success(results.map { it.toDomain() }))
             } else {
-                val fallbackResponse = animeApiService.searchAnimes(query = query, type = "tv")
-                val rawList = fallbackResponse.data ?: emptyList()
-                emit(Resource.Success(rawList.map { it.toDomain() }))
+                emit(Resource.Success(getFallbackAnimeList(null).filter { it.title.contains(query, ignoreCase = true) }))
             }
         } catch (e: Exception) {
-            safeLogE("AnimeRepository", "Erro na busca: ${e.message}", e)
+            safeLogE("AnimeRepository", "Erro na busca Anitaku: ${e.message}", e)
             emit(Resource.Success(getFallbackAnimeList(null).filter { it.title.contains(query, ignoreCase = true) }))
         }
     }.flowOn(Dispatchers.IO)
