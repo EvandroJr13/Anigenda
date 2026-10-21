@@ -1,18 +1,19 @@
 package agenda.de.myapplicationanim1.data.remote
 
+import agenda.de.myapplicationanim1.data.model.AnitakuInfoResponse
 import agenda.de.myapplicationanim1.data.model.AnitakuResponse
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface AnitakuApiService {
 
     @GET("recent-episodes")
     suspend fun getRecentEpisodes(
-        @Query("page") page: Int = 1,
-        @Query("type") type: Int = 1
+        @Query("page") page: Int = 1
     ): Response<AnitakuResponse>
 
     @GET("top-airing")
@@ -25,14 +26,18 @@ interface AnitakuApiService {
         @Query("page") page: Int = 1
     ): Response<AnitakuResponse>
 
-    @GET("search")
+    @GET("search/{key}")
     suspend fun search(
-        @Query("key") query: String,
-        @Query("page") page: Int = 1
+        @Path("key") query: String
     ): Response<AnitakuResponse>
 
+    @GET("info/{id}")
+    suspend fun getInfo(
+        @Path("id") id: String
+    ): Response<AnitakuInfoResponse>
+
     companion object {
-        private const val BASE_URL = "https://api-anfi.vercel.app/"
+        private const val BASE_URL = "https://gogoanime-api-eta.vercel.app/"
 
         fun create(): AnitakuApiService {
             val loggingInterceptor = okhttp3.logging.HttpLoggingInterceptor { message ->

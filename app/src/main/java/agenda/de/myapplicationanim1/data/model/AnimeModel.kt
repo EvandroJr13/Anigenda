@@ -22,6 +22,7 @@ data class AnimeModel(
     @SerializedName("images") val images: ImageWrapper?,
     @SerializedName("broadcast") val broadcast: JikanBroadcastInfo?,
     @SerializedName("rating") val rating: String?, // Ex: "PG-13", "R - 17+", "Rx - Hentai"
+    @SerializedName("type") val type: String? = null, // Ex: "TV", "Movie", "OVA"
     @SerializedName("streaming") val streaming: List<StreamingPlatform>?, // Plataformas do anime
     @SerializedName("synopsis") val synopsis: String? = null,
     @SerializedName("score") val score: Double? = null,
@@ -94,7 +95,7 @@ fun AnimeModel.toDomain(matchedPlatforms: List<String> = emptyList(), overrideDa
             timezone = broadcast?.timezone ?: "JST",
             stringFormat = fullBroadcastStr
         ),
-        genres = emptyList(),
+        genres = listOfNotNull(type ?: "TV"),
         studios = emptyList(),
         season = "",
         year = null,
