@@ -1,73 +1,77 @@
 package agenda.de.myapplicationanim1
 
 import agenda.de.myapplicationanim1.data.model.Anime
-import agenda.de.myapplicationanim1.data.model.AnimeDetailResponse
-import agenda.de.myapplicationanim1.data.model.AnimeListResponse
-import agenda.de.myapplicationanim1.data.model.AnimeModel
-import agenda.de.myapplicationanim1.data.model.ImageWrapper
-import agenda.de.myapplicationanim1.data.model.ImageType
-import agenda.de.myapplicationanim1.data.model.JikanBroadcastInfo
-import agenda.de.myapplicationanim1.data.model.StreamingLinksResponse
-import agenda.de.myapplicationanim1.data.model.StreamingPlatform
+import agenda.de.myapplicationanim1.data.model.KitsuAnimeAttributes
+import agenda.de.myapplicationanim1.data.model.KitsuAnimeData
+import agenda.de.myapplicationanim1.data.model.KitsuAnimeListResponse
+import agenda.de.myapplicationanim1.data.model.KitsuAnimeSingleResponse
+import agenda.de.myapplicationanim1.data.model.KitsuImageWrapper
 import agenda.de.myapplicationanim1.data.model.toDomain
-import agenda.de.myapplicationanim1.data.remote.AnimeApiService
+import agenda.de.myapplicationanim1.data.remote.KitsuApiService
 import agenda.de.myapplicationanim1.data.repository.AnimeRepositoryImpl
 import agenda.de.myapplicationanim1.data.util.Resource
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import retrofit2.Response
 
 class AnimeRepositoryTest {
 
     @Test
-    fun animeModel_getDisplayName_and_getImageUrl_isCorrect() {
-        val model = AnimeModel(
-            id = 1,
-            title = "Jap Title",
-            titleEnglish = "English Title",
-            images = ImageWrapper(jpg = ImageType(imageUrl = "http://example.com/small.jpg", largeImageUrl = "http://example.com/large.jpg")),
-            broadcast = JikanBroadcastInfo(day = "Mondays", time = "12:00", timezone = "JST", fullBroadcast = "Mondays at 12:00"),
-            rating = "PG-13",
-            streaming = listOf(StreamingPlatform(name = "Crunchyroll")),
-            airing = true
+    fun kitsuAnimeData_toDomain_mapping_isCorrect() {
+        val data = KitsuAnimeData(
+            id = "101",
+            type = "anime",
+            attributes = KitsuAnimeAttributes(
+                canonicalTitle = "Solo Leveling",
+                titles = mapOf("en" to "Solo Leveling"),
+                posterImage = KitsuImageWrapper(large = "http://example.com/cover.jpg"),
+                synopsis = "Synopsis",
+                averageRating = "85.0",
+                status = "current",
+                startDate = "2024-01-08"
+            )
         )
 
-        assertEquals("English Title", model.getDisplayName())
-        assertEquals("http://example.com/large.jpg", model.getImageUrl())
+        val domain = data.toDomain()
 
-        val domain = model.toDomain(listOf("Crunchyroll"))
-        assertEquals("English Title", domain.title)
+        assertEquals(101, domain.id)
+        assertEquals("Solo Leveling", domain.title)
+        assertEquals("http://example.com/cover.jpg", domain.imageUrl)
         assertEquals("Segunda", domain.airingDay)
     }
 
     @Test
-    fun getSchedules_returnsFilteredAnimes() = runTest {
-        val fakeApi = object : AnimeApiService {
-            override suspend fun getDailySchedule(day: String?, sfw: Boolean): AnimeListResponse {
-                return AnimeListResponse(
-                    data = listOf(
-                        AnimeModel(
-                            id = 101,
-                            title = "Solo Leveling",
-                            titleEnglish = "Solo Leveling",
-                            images = ImageWrapper(jpg = ImageType(imageUrl = "http://example.com/solo.jpg", largeImageUrl = "http://example.com/solo.jpg")),
-                            broadcast = JikanBroadcastInfo(day = "Mondays", time = "12:00", timezone = "JST", fullBroadcast = "Mondays at 12:00"),
-                            rating = "PG-13",
-                            streaming = listOf(StreamingPlatform(name = "Crunchyroll")),
-                            airing = true
+    fun getSchedules_returnsKitsuAnimes() = runTest {
+        val fakeKitsuApi = object : KitsuApiService {
+            override suspend fun getCurrentlyAiringAnime(status: String, limit: Int, sort: String): Response<KitsuAnimeListResponse> {
+                return Response.success(
+                    KitsuAnimeListResponse(
+                        data = listOf(
+                            KitsuAnimeData(
+                                id = "101",
+                                type = "anime",
+                                attributes = KitsuAnimeAttributes(
+                                    canonicalTitle = "Solo Leveling",
+                                    titles = mapOf("en" to "Solo Leveling"),
+                                    posterImage = KitsuImageWrapper(large = "http://example.com/cover.jpg"),
+                                    synopsis = "Synopsis",
+                                    averageRating = "85.0",
+                                    status = "current",
+                                    startDate = "2024-01-08"
+                                )
+                            )
                         )
                     )
                 )
             }
 
-            override suspend fun getPopularAnimes(filter: String, sfw: Boolean, page: Int) = AnimeListResponse()
-            override suspend fun getAnimeStreamingPlatforms(animeId: Int) = StreamingLinksResponse()
-            override suspend fun getAnimeDetails(animeId: Int) = AnimeDetailResponse()
-            override suspend fun searchAnimes(query: String, sfw: Boolean) = AnimeListResponse()
+            override suspend fun searchAnime(query: String, limit: Int) = Response.success(KitsuAnimeListResponse())
+            override suspend fun getAnimeDetails(id: String) = Response.success(KitsuAnimeSingleResponse())
         }
 
-        val repository = AnimeRepositoryImpl(apiService = fakeApi)
+        val repository = AnimeRepositoryImpl(kitsuApiService = fakeKitsuApi)
         val results = mutableListOf<Resource<List<Anime>>>()
         repository.getSchedules("Segunda").collect { results.add(it) }
 
