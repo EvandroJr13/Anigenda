@@ -38,6 +38,18 @@ class RateLimitRetryInterceptor : Interceptor {
     }
 }
 
+class UserAgentInterceptor : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val originalRequest = chain.request()
+        val newRequest = originalRequest.newBuilder()
+            .header("User-Agent", "AnimeScheduleApp (https://github.com/EvandroJr13/Anime_Schedule)")
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json")
+            .build()
+        return chain.proceed(newRequest)
+    }
+}
+
 object RetrofitClient {
     private const val BASE_URL = "https://graphql.anilist.co/"
     private const val CDN_BASE_URL = "https://cdn.jsdelivr.net/"
@@ -61,6 +73,7 @@ object RetrofitClient {
             level = HttpLoggingInterceptor.Level.BODY
         }
         val builder = OkHttpClient.Builder()
+            .addInterceptor(UserAgentInterceptor())
             .addInterceptor(RateLimitRetryInterceptor())
             .addInterceptor(loggingInterceptor)
             .connectTimeout(30, TimeUnit.SECONDS)
