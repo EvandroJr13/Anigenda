@@ -11,22 +11,25 @@ import retrofit2.http.Query
 
 interface AnimeApiService {
 
-    // 1. Current Season Anime
+    // 1. Current Season Anime (TV Series currently airing this season)
     @GET("seasons/now")
     suspend fun getCurrentSeasonAnime(
+        @Query("filter") filter: String? = "tv",
         @Query("page") page: Int = 1
     ): AnimeListResponse
 
     // 2. Animes do Dia / Calendário de Lançamentos
     @GET("schedules")
     suspend fun getDailySchedule(
-        @Query("filter") day: String? = null // Ex: "monday", "tuesday". Se nulo, traz o dia atual
+        @Query("filter") day: String? = null, // Ex: "monday", "tuesday". Se nulo, traz o dia atual
+        @Query("type") type: String? = "tv"    // Strictly filter TV series
     ): AnimeListResponse
 
     // 3. Animes Mais Populares
     @GET("top/anime")
     suspend fun getPopularAnimes(
         @Query("filter") filter: String = "bypopularity",
+        @Query("type") type: String? = "tv",
         @Query("page") page: Int = 1
     ): AnimeListResponse
 
@@ -45,7 +48,8 @@ interface AnimeApiService {
     // 6. Busca de animes por texto
     @GET("anime")
     suspend fun searchAnimes(
-        @Query("q") query: String
+        @Query("q") query: String,
+        @Query("type") type: String? = "tv"
     ): AnimeListResponse
 
     companion object {

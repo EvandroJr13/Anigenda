@@ -35,13 +35,13 @@ class AnimeRepositoryImpl(
         emit(Resource.Loading)
         var animeList: List<Anime>? = null
 
-        // Tier 1: Try Jikan API (MAL open API)
+        // Tier 1: Try Jikan API (MAL open API for current season TV shows)
         try {
             val dayEnglish = mapPortugueseDayToEnglishFilter(filter)
             val response = if (dayEnglish != null) {
-                animeApiService.getDailySchedule(day = dayEnglish)
+                animeApiService.getDailySchedule(day = dayEnglish, type = "tv")
             } else {
-                animeApiService.getCurrentSeasonAnime()
+                animeApiService.getCurrentSeasonAnime(filter = "tv")
             }
             val rawList = response.data ?: emptyList()
             val filtered = processAndFilterAnimes(rawList, filter)
@@ -109,7 +109,7 @@ class AnimeRepositoryImpl(
 
         // Tier 1: Try Jikan API
         try {
-            val response = animeApiService.getPopularAnimes()
+            val response = animeApiService.getPopularAnimes(type = "tv")
             val rawList = response.data ?: emptyList()
             val filtered = processAndFilterAnimes(rawList)
             if (filtered.isNotEmpty()) {
@@ -148,7 +148,7 @@ class AnimeRepositoryImpl(
     override fun searchAnime(query: String, genre: String?): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
         try {
-            val response = animeApiService.searchAnimes(query = query)
+            val response = animeApiService.searchAnimes(query = query, type = "tv")
             val rawList = response.data ?: emptyList()
             val filteredDomainList = processAndFilterAnimes(rawList)
             emit(Resource.Success(filteredDomainList))
@@ -218,13 +218,18 @@ class AnimeRepositoryImpl(
         val filteredResult = mutableListOf<Anime>()
 
         for (anime in animes) {
+            // 1. Must be currently airing
             val isCurrentlyAiring = anime.airing == true ||
                     anime.status.equals("Currently Airing", ignoreCase = true) ||
                     anime.status.equals("RELEASING", ignoreCase = true)
             if (!isCurrentlyAiring) continue
 
-            // Filter ONLY explicit Hentai/Rx, keeping all standard/regular anime shows
+            // 2. Filter out explicit Hentai/Rx
             if (anime.isExplicitHentai()) continue
+
+            // 3. Filter strictly TV series (exclude music videos, promos, commercials)
+            val typeStr = anime.type ?: "TV"
+            if (!typeStr.equals("TV", ignoreCase = true) && !typeStr.equals("TV Special", ignoreCase = true)) continue
 
             val domainAnime = anime.toDomain(overrideDay = dayFilter)
             filteredResult.add(domainAnime)
