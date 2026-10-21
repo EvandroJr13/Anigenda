@@ -42,7 +42,7 @@ class UserAgentInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
         val newRequest = originalRequest.newBuilder()
-            .header("User-Agent", "AnimeScheduleApp (https://github.com/EvandroJr13/Anime_Schedule)")
+            .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36")
             .header("Accept", "application/json")
             .header("Content-Type", "application/json")
             .build()
