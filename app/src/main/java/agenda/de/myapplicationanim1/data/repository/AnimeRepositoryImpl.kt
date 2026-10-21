@@ -67,7 +67,7 @@ class AnimeRepositoryImpl(
         try {
             val response = apiService.searchAnimes(query = query, sfw = true)
             val rawList = response.data ?: emptyList()
-            val filteredDomainList = processAndFilterAnimes(rawList, checkStreaming = false)
+            val filteredDomainList = processAndFilterAnimes(rawList)
             emit(Resource.Success(filteredDomainList))
         } catch (e: Exception) {
             safeLogE("AnimeRepository", "Erro na busca: ${e.message}", e)
@@ -101,9 +101,8 @@ class AnimeRepositoryImpl(
         }
     }.flowOn(Dispatchers.IO)
 
-    private suspend fun processAndFilterAnimes(
-        animes: List<AnimeModel>,
-        checkStreaming: Boolean = true
+    private fun processAndFilterAnimes(
+        animes: List<AnimeModel>
     ): List<Anime> {
         val filteredResult = mutableListOf<Anime>()
 
@@ -114,24 +113,13 @@ class AnimeRepositoryImpl(
                     rating.contains("Hentai", ignoreCase = true)
             if (isMature) continue
 
-            // 2. Fetch and map streaming platforms for the anime
-            var streamingList = anime.streaming?.map { it.name } ?: emptyList()
-
-            if (checkStreaming && streamingList.isEmpty()) {
-                try {
-                    val streamResponse = apiService.getAnimeStreamingPlatforms(anime.id)
-                    streamingList = streamResponse.data?.map { it.name } ?: emptyList()
-                } catch (_: Exception) {}
-            }
-
-            // 3. Filter matched streaming platforms
+            // 2. Map streaming platforms directly from model
+            val streamingList = anime.streaming?.map { it.name } ?: emptyList()
             val matchedPlatforms = streamingList.filter { platform ->
                 allowedPlatforms.any { allowed -> platform.contains(allowed, ignoreCase = true) }
             }
 
-            if (!checkStreaming || matchedPlatforms.isNotEmpty() || streamingList.isEmpty()) {
-                filteredResult.add(anime.toDomain(matchedPlatforms))
-            }
+            filteredResult.add(anime.toDomain(matchedPlatforms))
         }
 
         return filteredResult
