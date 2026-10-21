@@ -33,28 +33,47 @@ data class BangumiSiteDto(
     val name: String?
 )
 
+fun BangumiItemDto.isMatureContent(): Boolean {
+    val t = type?.lowercase() ?: ""
+    val s = summary?.lowercase() ?: ""
+    val titleStr = title?.lowercase() ?: ""
+    return t == "hentai" || t == "r18" || t == "erotica" ||
+            s.contains("hentai") || s.contains("adult") || s.contains("ecchi") ||
+            titleStr.contains("hentai") || titleStr.contains("erotica")
+}
+
 fun BangumiItemDto.toDomain(): Anime {
-    val englishTitle = titleTranslate?.get("en")?.firstOrNull { it.isNotBlank() }
+    val englishList = titleTranslate?.get("en")
+        ?: titleTranslate?.get("en-US")
+        ?: titleTranslate?.get("en-GB")
+    val englishTitle = englishList?.firstOrNull { it.isNotBlank() }
     val titleStr = englishTitle ?: title ?: "Desconhecido"
     val numericId = id?.hashCode() ?: titleStr.hashCode()
 
     val bangumiSite = sites?.firstOrNull { it.site == "bangumi" }
     val bangumiId = bangumiSite?.id?.toString()
 
+    val malSite = sites?.firstOrNull { it.site == "mal" }
+    val malId = malSite?.id?.toString()
+
     val imgUrl = when {
         !image.isNullOrBlank() -> image
         !bangumiId.isNullOrBlank() -> "https://api.bgm.tv/v0/subjects/$bangumiId/image?type=large"
+        !malId.isNullOrBlank() -> "https://cdn.myanimelist.net/images/anime/$malId.jpg"
         else -> ""
     }
 
-    val dayOfWeekPt = when (weekDay) {
-        1 -> "Segunda"
-        2 -> "Terça"
-        3 -> "Quarta"
-        4 -> "Quinta"
-        5 -> "Sexta"
-        6 -> "Sábado"
-        7, 0 -> "Domingo"
+    val dayOfWeekPt = when {
+        weekDay != null && weekDay in 0..7 -> when (weekDay) {
+            1 -> "Segunda"
+            2 -> "Terça"
+            3 -> "Quarta"
+            4 -> "Quinta"
+            5 -> "Sexta"
+            6 -> "Sábado"
+            7, 0 -> "Domingo"
+            else -> "Segunda"
+        }
         else -> parseDayFromBegin(begin) ?: "Segunda"
     }
 

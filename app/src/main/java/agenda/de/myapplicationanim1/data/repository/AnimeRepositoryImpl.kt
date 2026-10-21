@@ -2,6 +2,7 @@ package agenda.de.myapplicationanim1.data.repository
 
 import android.util.Log
 import agenda.de.myapplicationanim1.data.model.Anime
+import agenda.de.myapplicationanim1.data.model.isMatureContent
 import agenda.de.myapplicationanim1.data.model.toDomain
 import agenda.de.myapplicationanim1.data.remote.AniListApiService
 import agenda.de.myapplicationanim1.data.remote.BangumiApiService
@@ -24,13 +25,13 @@ class AnimeRepositoryImpl(
         const val MEDIA_FIELDS = """
             id
             title {
-              romaji
               english
+              romaji
               native
             }
             coverImage {
-              large
               extraLarge
+              large
             }
             description
             averageScore
@@ -67,47 +68,48 @@ class AnimeRepositoryImpl(
         emit(Resource.Loading)
         var animeList: List<Anime>? = null
 
-        // 1. Try Bangumi Data CDN
+        // 1. Try AniList GraphQL API first for real-time airing schedules, English titles, posters & strict non-adult filtering
         try {
-            val response = bangumiApiService.getItems()
+            val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+            val query = """
+                query (${'$'}year: Int) {
+                  Page(page: 1, perPage: 50) {
+                    media(seasonYear: ${'$'}year, type: ANIME, status: RELEASING, sort: [POPULARITY_DESC], isAdult: false) {
+                      $MEDIA_FIELDS
+                    }
+                  }
+                }
+            """.trimIndent()
+
+            val variables = mapOf("year" to currentYear)
+            val body = mapOf("query" to query, "variables" to variables)
+            val response = apiService.graphqlQuery(body)
+
             if (response.isSuccessful) {
-                val items = response.body()?.items ?: emptyList()
-                val mapped = items.map { it.toDomain() }
+                val mediaList = response.body()?.data?.page?.media ?: emptyList()
+                val mapped = mediaList.filter { it.isAdult != true }.map { it.toDomain() }
                 if (mapped.isNotEmpty()) {
                     animeList = mapped
                 }
             }
         } catch (e: Exception) {
-            Log.w("AnimeRepository", "Bangumi CDN failed or timed out: ${e.message}")
+            Log.w("AnimeRepository", "AniList GraphQL failed: ${e.message}")
         }
 
-        // 2. Fallback to AniList GraphQL API if Bangumi failed or returned empty
+        // 2. Fallback to Bangumi Data CDN if AniList failed or returned empty
         if (animeList.isNullOrEmpty()) {
             try {
-                val currentYear = Calendar.getInstance().get(Calendar.YEAR)
-                val query = """
-                    query (${'$'}year: Int) {
-                      Page(page: 1, perPage: 50) {
-                        media(seasonYear: ${'$'}year, type: ANIME, status: RELEASING, sort: [POPULARITY_DESC], isAdult: false) {
-                          $MEDIA_FIELDS
-                        }
-                      }
-                    }
-                """.trimIndent()
-
-                val variables = mapOf("year" to currentYear)
-                val body = mapOf("query" to query, "variables" to variables)
-                val response = apiService.graphqlQuery(body)
-
+                val response = bangumiApiService.getItems()
                 if (response.isSuccessful) {
-                    val mediaList = response.body()?.data?.page?.media ?: emptyList()
-                    val mapped = mediaList.filter { it.isAdult != true }.map { it.toDomain() }
+                    val items = response.body()?.items ?: emptyList()
+                    val filteredItems = items.filter { !it.isMatureContent() }
+                    val mapped = filteredItems.map { it.toDomain() }
                     if (mapped.isNotEmpty()) {
                         animeList = mapped
                     }
                 }
             } catch (e: Exception) {
-                Log.w("AnimeRepository", "AniList GraphQL failed: ${e.message}")
+                Log.w("AnimeRepository", "Bangumi CDN failed or timed out: ${e.message}")
             }
         }
 
