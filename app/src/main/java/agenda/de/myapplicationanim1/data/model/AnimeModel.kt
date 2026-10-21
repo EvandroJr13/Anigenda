@@ -26,7 +26,8 @@ data class AnimeModel(
     @SerializedName("synopsis") val synopsis: String? = null,
     @SerializedName("score") val score: Double? = null,
     @SerializedName("episodes") val episodes: Int? = null,
-    @SerializedName("status") val status: String? = null
+    @SerializedName("status") val status: String? = null,
+    @SerializedName("airing") val airing: Boolean? = null
 ) {
     // Retorna o nome em inglês; se não houver tradução oficial, usa o nome padrão
     fun getDisplayName(): String = titleEnglish?.takeIf { it.isNotBlank() } ?: title
@@ -80,7 +81,7 @@ fun AnimeModel.toDomain(matchedPlatforms: List<String> = emptyList()): Anime {
         synopsis = synopsis ?: "No synopsis available.",
         score = score ?: 0.0,
         episodes = episodes ?: 0,
-        status = status ?: "RELEASING",
+        status = status ?: "Currently Airing",
         aired = "",
         broadcast = BroadcastInfo(
             day = ptDay,
