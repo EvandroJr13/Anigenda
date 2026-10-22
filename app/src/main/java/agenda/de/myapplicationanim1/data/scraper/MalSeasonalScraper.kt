@@ -27,7 +27,8 @@ class MalSeasonalScraper {
     }
 
     /**
-     * Faz o Web Scraping em tempo real da página de temporada atual do MyAnimeList (ano 2026).
+     * Faz o Web Scraping em tempo real da página de temporada atual do MyAnimeList (ano 2026),
+     * filtrando estritamente por animes em exibição ou estreias da temporada.
      */
     suspend fun scrapeSeasonalAnimes(): List<SeasonalAnimeItem> = withContext(Dispatchers.IO) {
         try {
@@ -54,6 +55,14 @@ class MalSeasonalScraper {
 
             for (card in cards) {
                 try {
+                    // Validação estrita: Verifica se é uma série de TV em exibição ou estreia ativa
+                    val infoText = card.select("div.info").text().lowercase()
+                    val typeText = card.select("div.type").text().lowercase()
+                    
+                    // Descarta animes antigos concluídos ou mídias secundárias que não sejam estreias da temporada
+                    val isAiringOrNew = typeText.contains("tv") || infoText.contains("ep") || infoText.contains("2026")
+                    if (!isAiringOrNew) continue
+
                     // Nome do anime
                     val titleLink = card.select("a.link-title").first() ?: card.select("h2.h2_anime_title a").first()
                     val name = titleLink?.text()?.trim() ?: continue
@@ -118,7 +127,6 @@ class MalSeasonalScraper {
                 val mm = match.groupValues[1].padStart(2, '0')
                 val dd = match.groupValues[2].padStart(2, '0')
                 val yyyy = match.groupValues[3].toInt()
-                // Garante que o ano seja o atual (2026) se vier desatualizado
                 val finalYear = if (yyyy < 2026) currentYear else yyyy
                 return "$dd/$mm/$finalYear"
             }
