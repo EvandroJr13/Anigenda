@@ -3,118 +3,111 @@ package agenda.de.myapplicationanim1.data.model
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
+data class GraphQLPayload(
+    val query: String,
+    val variables: Map<String, Any?> = emptyMap()
+)
+
 @JsonClass(generateAdapter = true)
 data class AniListResponse(
-    @Json(name = "data")
-    val data: AniListData? = null
+    @field:Json(name = "data") val data: AniListData? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class AniListData(
-    @Json(name = "Page")
-    val page: PageDto? = null,
-    @Json(name = "Media")
-    val media: MediaDto? = null
+    @field:Json(name = "Page") val page: AniListPage? = null,
+    @field:Json(name = "Media") val media: AniListMedia? = null
 )
 
 @JsonClass(generateAdapter = true)
-data class PageDto(
-    @Json(name = "media")
-    val media: List<MediaDto>? = emptyList()
+data class AniListPage(
+    @field:Json(name = "media") val media: List<AniListMedia>? = emptyList(),
+    @field:Json(name = "airingSchedules") val airingSchedules: List<AniListAiringSchedule>? = emptyList()
 )
 
 @JsonClass(generateAdapter = true)
-data class MediaDto(
-    @Json(name = "id")
-    val id: Int = 0,
-    @Json(name = "title")
-    val title: TitleDto? = null,
-    @Json(name = "coverImage")
-    val coverImage: CoverImageDto? = null,
-    @Json(name = "description")
-    val description: String? = null,
-    @Json(name = "averageScore")
-    val averageScore: Int? = null,
-    @Json(name = "episodes")
-    val episodes: Int? = null,
-    @Json(name = "status")
-    val status: String? = null,
-    @Json(name = "startDate")
-    val startDate: StartDateDto? = null,
-    @Json(name = "nextAiringEpisode")
-    val nextAiringEpisode: NextAiringEpisodeDto? = null,
-    @Json(name = "genres")
-    val genres: List<String>? = emptyList(),
-    @Json(name = "studios")
-    val studios: StudioConnectionDto? = null,
-    @Json(name = "trailer")
-    val trailer: TrailerDto? = null,
-    @Json(name = "isAdult")
-    val isAdult: Boolean? = false,
-    @Json(name = "externalLinks")
-    val externalLinks: List<ExternalLinkDto>? = emptyList()
+data class AniListAiringSchedule(
+    @field:Json(name = "id") val id: Int,
+    @field:Json(name = "airingAt") val airingAt: Long,
+    @field:Json(name = "episode") val episode: Int,
+    @field:Json(name = "media") val media: AniListMedia? = null
 )
 
 @JsonClass(generateAdapter = true)
-data class ExternalLinkDto(
-    @Json(name = "site")
-    val site: String? = null,
-    @Json(name = "url")
-    val url: String? = null
+data class AniListMedia(
+    @field:Json(name = "id") val id: Int,
+    @field:Json(name = "title") val title: AniListTitle? = null,
+    @field:Json(name = "coverImage") val coverImage: AniListCoverImage? = null,
+    @field:Json(name = "description") val description: String? = null,
+    @field:Json(name = "averageScore") val averageScore: Double? = null,
+    @field:Json(name = "episodes") val episodes: Int? = null,
+    @field:Json(name = "status") val status: String? = null,
+    @field:Json(name = "nextAiringEpisode") val nextAiringEpisode: AniListNextAiringEpisode? = null,
+    @field:Json(name = "genres") val genres: List<String>? = emptyList(),
+    @field:Json(name = "isAdult") val isAdult: Boolean? = false,
+    @field:Json(name = "externalLinks") val externalLinks: List<AniListExternalLink>? = emptyList()
 )
 
 @JsonClass(generateAdapter = true)
-data class TitleDto(
-    @Json(name = "romaji")
-    val romaji: String? = null,
-    @Json(name = "english")
-    val english: String? = null,
-    @Json(name = "native")
-    val native: String? = null
+data class AniListTitle(
+    @field:Json(name = "english") val english: String? = null,
+    @field:Json(name = "romaji") val romaji: String? = null,
+    @field:Json(name = "native") val nativeTitle: String? = null
+) {
+    fun getDisplayName(): String {
+        return english?.takeIf { it.isNotBlank() } ?: romaji ?: nativeTitle ?: "Unknown Title"
+    }
+}
+
+@JsonClass(generateAdapter = true)
+data class AniListCoverImage(
+    @field:Json(name = "extraLarge") val extraLarge: String? = null,
+    @field:Json(name = "large") val large: String? = null
 )
 
 @JsonClass(generateAdapter = true)
-data class CoverImageDto(
-    @Json(name = "extraLarge")
-    val extraLarge: String? = null,
-    @Json(name = "large")
-    val large: String? = null
+data class AniListNextAiringEpisode(
+    @field:Json(name = "airingAt") val airingAt: Long? = null,
+    @field:Json(name = "episode") val episode: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
-data class StartDateDto(
-    @Json(name = "year")
-    val year: Int? = null,
-    @Json(name = "month")
-    val month: Int? = null,
-    @Json(name = "day")
-    val day: Int? = null
+data class AniListExternalLink(
+    @field:Json(name = "site") val site: String,
+    @field:Json(name = "url") val url: String? = null
 )
 
-@JsonClass(generateAdapter = true)
-data class NextAiringEpisodeDto(
-    @Json(name = "airingAt")
-    val airingAt: Long? = null,
-    @Json(name = "episode")
-    val episode: Int? = null
-)
+fun AniListMedia.toDomain(overrideDay: String? = null): Anime {
+    val titleEng = title?.getDisplayName() ?: "Unknown Title"
+    val imgUrl = coverImage?.extraLarge ?: coverImage?.large ?: ""
+    val scoreVal = averageScore?.let { it / 10.0 } ?: 0.0
 
-@JsonClass(generateAdapter = true)
-data class StudioConnectionDto(
-    @Json(name = "nodes")
-    val nodes: List<StudioDto>? = emptyList()
-)
+    val ptDay = overrideDay ?: "Segunda"
 
-@JsonClass(generateAdapter = true)
-data class StudioDto(
-    @Json(name = "name")
-    val name: String? = null
-)
-
-@JsonClass(generateAdapter = true)
-data class TrailerDto(
-    @Json(name = "id")
-    val id: String? = null,
-    @Json(name = "site")
-    val site: String? = null
-)
+    return Anime(
+        id = id,
+        title = titleEng,
+        titleRomaji = title?.romaji ?: titleEng,
+        titleEnglish = title?.english ?: titleEng,
+        titleNative = title?.nativeTitle ?: "",
+        titleJapanese = title?.nativeTitle ?: "",
+        imageUrl = imgUrl,
+        largeImageUrl = imgUrl,
+        synopsis = description ?: "No synopsis available.",
+        score = scoreVal,
+        episodes = episodes ?: 0,
+        status = status ?: "RELEASING",
+        aired = "",
+        broadcast = BroadcastInfo(day = ptDay, time = "", timezone = "UTC", stringFormat = ptDay),
+        genres = genres ?: emptyList(),
+        studios = emptyList(),
+        season = "",
+        year = null,
+        rating = if (isAdult == true) "Rx" else "PG-13",
+        airingDay = ptDay,
+        nextAiringEpisode = nextAiringEpisode?.let { NextAiringEpisodeInfo(airingAt = it.airingAt ?: 0L, episode = it.episode ?: 0) },
+        trailerId = null,
+        trailerSite = null,
+        externalLinks = externalLinks?.map { ExternalLinkInfo(site = it.site, url = it.url ?: "") } ?: emptyList()
+    )
+}

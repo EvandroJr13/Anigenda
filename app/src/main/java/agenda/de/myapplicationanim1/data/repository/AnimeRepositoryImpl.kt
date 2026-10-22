@@ -2,10 +2,9 @@ package agenda.de.myapplicationanim1.data.repository
 
 import android.util.Log
 import agenda.de.myapplicationanim1.data.model.Anime
-import agenda.de.myapplicationanim1.data.model.isMatureContent
+import agenda.de.myapplicationanim1.data.model.GraphQLPayload
 import agenda.de.myapplicationanim1.data.model.toDomain
-import agenda.de.myapplicationanim1.data.remote.BangumiApiService
-import agenda.de.myapplicationanim1.data.remote.RetrofitClient
+import agenda.de.myapplicationanim1.data.remote.AniListApiService
 import agenda.de.myapplicationanim1.data.util.Resource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -13,23 +12,8 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 
 class AnimeRepositoryImpl(
-    private val bangumiApiService: BangumiApiService = RetrofitClient.bangumiApiService
+    private val aniListApiService: AniListApiService = AniListApiService.create()
 ) : AnimeRepository {
-
-    private val allowedPlatforms = listOf(
-        "Crunchyroll",
-        "Netflix",
-        "Disney+",
-        "Amazon Prime Video",
-        "Prime Video",
-        "HBO Max",
-        "Max",
-        "Hulu",
-        "Paramount+",
-        "Apple TV+",
-        "Bilibili",
-        "YouTube"
-    )
 
     private fun safeLogE(tag: String, msg: String, tr: Throwable? = null) {
         try {
@@ -42,42 +26,56 @@ class AnimeRepositoryImpl(
     override fun getSchedules(filter: String?): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
         try {
-            val response = bangumiApiService.getItems()
+            val query = """
+                query (${'$'}page: Int, ${'$'}perPage: Int) {
+                  Page(page: ${'$'}page, perPage: ${'$'}perPage) {
+                    media(type: ANIME, status: RELEASING, sort: [POPULARITY_DESC], isAdult: false) {
+                      id
+                      title {
+                        english
+                        romaji
+                        native
+                      }
+                      coverImage {
+                        extraLarge
+                        large
+                      }
+                      description
+                      averageScore
+                      episodes
+                      status
+                      nextAiringEpisode {
+                        airingAt
+                        episode
+                      }
+                      genres
+                      isAdult
+                      externalLinks {
+                        site
+                        url
+                      }
+                    }
+                  }
+                }
+            """.trimIndent()
+
+            val payload = GraphQLPayload(
+                query = query,
+                variables = mapOf("page" to 1, "perPage" to 50)
+            )
+
+            val response = aniListApiService.getAnimesDeHoje(payload)
             if (response.isSuccessful) {
-                val dataResponse = response.body()
-                val items = dataResponse?.items ?: emptyList()
-                var animeList = items
-                    .filter { !it.isMatureContent() }
-                    // Require strict English title presence in titleTranslate["en"]
-                    .filter { item ->
-                        val enList = item.titleTranslate?.get("en") ?: item.titleTranslate?.get("en-US")
-                        !enList.isNullOrEmpty() && enList.any { it.isNotBlank() }
-                    }
-                    .map { it.toDomain() }
-
-                // Filter by popular streaming platforms in BR/USA if sites are present
-                animeList = animeList.filter { anime ->
-                    if (anime.externalLinks.isEmpty()) {
-                        true
-                    } else {
-                        anime.externalLinks.any { link ->
-                            val site = link.site.lowercase()
-                            allowedPlatforms.any { allowed -> site.contains(allowed.lowercase()) }
-                        }
-                    }
-                }
-
-                if (!filter.isNullOrBlank()) {
-                    val normalizedFilter = filter.trim().lowercase()
-                    animeList = animeList.filter { it.airingDay.lowercase() == normalizedFilter }
-                }
-
-                emit(Resource.Success(animeList))
+                val mediaList = response.body()?.data?.page?.media ?: emptyList()
+                val domainList = mediaList
+                    .filter { it.isAdult != true }
+                    .map { it.toDomain(overrideDay = filter) }
+                emit(Resource.Success(domainList))
             } else {
-                emit(Resource.Error("Erro ao carregar programação: HTTP ${response.code()}"))
+                emit(Resource.Error("Erro na API AniList: HTTP ${response.code()}"))
             }
         } catch (e: Exception) {
-            safeLogE("AnimeRepository", "Erro Bangumi: ${e.message}", e)
+            safeLogE("AnimeRepository", "Erro ao carregar AniList: ${e.message}", e)
             emit(Resource.Error("Erro ao carregar programação: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
@@ -85,24 +83,52 @@ class AnimeRepositoryImpl(
     override fun getPopularAnime(): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
         try {
-            val response = bangumiApiService.getItems()
-            if (response.isSuccessful) {
-                val dataResponse = response.body()
-                val items = dataResponse?.items ?: emptyList()
-                val animeList = items
-                    .filter { !it.isMatureContent() }
-                    .filter { item ->
-                        val enList = item.titleTranslate?.get("en") ?: item.titleTranslate?.get("en-US")
-                        !enList.isNullOrEmpty() && enList.any { it.isNotBlank() }
+            val query = """
+                query (${'$'}page: Int, ${'$'}perPage: Int) {
+                  Page(page: ${'$'}page, perPage: ${'$'}perPage) {
+                    media(type: ANIME, sort: [POPULARITY_DESC, SCORE_DESC], isAdult: false) {
+                      id
+                      title {
+                        english
+                        romaji
+                        native
+                      }
+                      coverImage {
+                        extraLarge
+                        large
+                      }
+                      description
+                      averageScore
+                      episodes
+                      status
+                      genres
+                      isAdult
+                      externalLinks {
+                        site
+                        url
+                      }
                     }
+                  }
+                }
+            """.trimIndent()
+
+            val payload = GraphQLPayload(
+                query = query,
+                variables = mapOf("page" to 1, "perPage" to 24)
+            )
+
+            val response = aniListApiService.getAnimesDeHoje(payload)
+            if (response.isSuccessful) {
+                val mediaList = response.body()?.data?.page?.media ?: emptyList()
+                val domainList = mediaList
+                    .filter { it.isAdult != true }
                     .map { it.toDomain() }
-                    .take(24)
-                emit(Resource.Success(animeList))
+                emit(Resource.Success(domainList))
             } else {
-                emit(Resource.Error("Erro ao carregar populares"))
+                emit(Resource.Error("Erro ao carregar animes populares"))
             }
         } catch (e: Exception) {
-            safeLogE("AnimeRepository", "Erro populares Bangumi: ${e.message}", e)
+            safeLogE("AnimeRepository", "Erro animes populares AniList: ${e.message}", e)
             emit(Resource.Error("Erro ao carregar populares: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
@@ -110,29 +136,52 @@ class AnimeRepositoryImpl(
     override fun searchAnime(query: String, genre: String?): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
         try {
-            val response = bangumiApiService.getItems()
+            val gqlQuery = """
+                query (${'$'}search: String, ${'$'}page: Int, ${'$'}perPage: Int) {
+                  Page(page: ${'$'}page, perPage: ${'$'}perPage) {
+                    media(search: ${'$'}search, type: ANIME, sort: [POPULARITY_DESC], isAdult: false) {
+                      id
+                      title {
+                        english
+                        romaji
+                        native
+                      }
+                      coverImage {
+                        extraLarge
+                        large
+                      }
+                      description
+                      averageScore
+                      episodes
+                      status
+                      genres
+                      isAdult
+                      externalLinks {
+                        site
+                        url
+                      }
+                    }
+                  }
+                }
+            """.trimIndent()
+
+            val payload = GraphQLPayload(
+                query = gqlQuery,
+                variables = mapOf("search" to query, "page" to 1, "perPage" to 50)
+            )
+
+            val response = aniListApiService.getAnimesDeHoje(payload)
             if (response.isSuccessful) {
-                val dataResponse = response.body()
-                val items = dataResponse?.items ?: emptyList()
-                val normalizedQuery = query.trim().lowercase()
-                val animeList = items
-                    .filter { !it.isMatureContent() }
-                    .filter { item ->
-                        val enList = item.titleTranslate?.get("en") ?: item.titleTranslate?.get("en-US")
-                        !enList.isNullOrEmpty() && enList.any { it.isNotBlank() }
-                    }
+                val mediaList = response.body()?.data?.page?.media ?: emptyList()
+                val domainList = mediaList
+                    .filter { it.isAdult != true }
                     .map { it.toDomain() }
-                    .filter {
-                        it.title.lowercase().contains(normalizedQuery) ||
-                                it.titleEnglish.lowercase().contains(normalizedQuery) ||
-                                it.titleRomaji.lowercase().contains(normalizedQuery)
-                    }
-                emit(Resource.Success(animeList))
+                emit(Resource.Success(domainList))
             } else {
                 emit(Resource.Error("Erro na busca"))
             }
         } catch (e: Exception) {
-            safeLogE("AnimeRepository", "Erro na busca Bangumi: ${e.message}", e)
+            safeLogE("AnimeRepository", "Erro na busca AniList: ${e.message}", e)
             emit(Resource.Error("Erro na busca: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
@@ -140,18 +189,43 @@ class AnimeRepositoryImpl(
     override fun getAnimeDetails(id: Int): Flow<Resource<Anime>> = flow {
         emit(Resource.Loading)
         try {
-            val response = bangumiApiService.getItems()
-            if (response.isSuccessful) {
-                val dataResponse = response.body()
-                val items = dataResponse?.items ?: emptyList()
-                val item = items
-                    .filter { item ->
-                        val enList = item.titleTranslate?.get("en") ?: item.titleTranslate?.get("en-US")
-                        !enList.isNullOrEmpty() && enList.any { it.isNotBlank() }
+            val gqlQuery = """
+                query (${'$'}id: Int) {
+                  Media(id: ${'$'}id, type: ANIME) {
+                    id
+                    title {
+                      english
+                      romaji
+                      native
                     }
-                    .firstOrNull { it.id?.hashCode() == id || it.toDomain().id == id }
-                if (item != null) {
-                    emit(Resource.Success(item.toDomain()))
+                    coverImage {
+                      extraLarge
+                      large
+                    }
+                    description
+                    averageScore
+                    episodes
+                    status
+                    genres
+                    isAdult
+                    externalLinks {
+                      site
+                      url
+                    }
+                  }
+                }
+            """.trimIndent()
+
+            val payload = GraphQLPayload(
+                query = gqlQuery,
+                variables = mapOf("id" to id)
+            )
+
+            val response = aniListApiService.getAnimesDeHoje(payload)
+            if (response.isSuccessful) {
+                val mediaDto = response.body()?.data?.media
+                if (mediaDto != null) {
+                    emit(Resource.Success(mediaDto.toDomain()))
                 } else {
                     emit(Resource.Error("Detalhes do anime não encontrados"))
                 }
@@ -159,7 +233,7 @@ class AnimeRepositoryImpl(
                 emit(Resource.Error("Erro ao carregar detalhes"))
             }
         } catch (e: Exception) {
-            safeLogE("AnimeRepository", "Erro nos detalhes Bangumi: ${e.message}", e)
+            safeLogE("AnimeRepository", "Erro nos detalhes AniList: ${e.message}", e)
             emit(Resource.Error("Erro ao carregar detalhes: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
