@@ -30,30 +30,30 @@ class AnimeRepositoryImpl(
             val query = """
                 query (${'$'}page: Int, ${'$'}perPage: Int) {
                   Page(page: ${'$'}page, perPage: ${'$'}perPage) {
-                    media(type: ANIME, status: RELEASING, sort: [POPULARITY_DESC], isAdult: false) {
-                      id
-                      title {
-                        english
-                        romaji
-                        native
-                      }
-                      coverImage {
-                        extraLarge
-                        large
-                      }
-                      description
-                      averageScore
-                      episodes
-                      status
-                      nextAiringEpisode {
-                        airingAt
-                        episode
-                      }
-                      genres
-                      isAdult
-                      externalLinks {
-                        site
-                        url
+                    airingSchedules(notYetAired: true, sort: TIME) {
+                      episode
+                      airingAt
+                      media {
+                        id
+                        title {
+                          english
+                          romaji
+                          native
+                        }
+                        coverImage {
+                          extraLarge
+                          large
+                        }
+                        description
+                        averageScore
+                        episodes
+                        status
+                        genres
+                        isAdult
+                        externalLinks {
+                          site
+                          url
+                        }
                       }
                     }
                   }
@@ -67,13 +67,16 @@ class AnimeRepositoryImpl(
 
             val response = aniListApiService.getAnimesDeHoje(payload)
             if (response.isSuccessful) {
-                val mediaList = response.body()?.data?.page?.media ?: emptyList()
+                val schedulesList = response.body()?.data?.page?.airingSchedules ?: emptyList()
 
-                val domainList = mediaList
-                    .filter { it.isAdult != true }
-                    .map { media ->
-                        val calculatedDay = media.nextAiringEpisode?.airingAt?.let { getDayOfWeekFromTimestamp(it) }
-                        val finalDay = calculatedDay?.takeIf { it.isNotBlank() } ?: filter ?: "Segunda"
+                val domainList = schedulesList
+                    .mapNotNull { schedule ->
+                        val media = schedule.media ?: return@mapNotNull null
+                        if (media.isAdult == true) return@mapNotNull null
+
+                        val calculatedDay = getDayOfWeekFromTimestamp(schedule.airingAt)
+                        val finalDay = calculatedDay.takeIf { it.isNotBlank() } ?: filter ?: "Segunda"
+
                         media.toDomain(overrideDay = finalDay)
                     }
 
