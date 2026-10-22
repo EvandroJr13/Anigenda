@@ -22,7 +22,7 @@ interface AniListApiService {
             val loggingInterceptor = okhttp3.logging.HttpLoggingInterceptor { message ->
                 android.util.Log.d("AniListHttp", message)
             }.apply {
-                level = okhttp3.logging.HttpLoggingInterceptor.Level.BASIC
+                level = okhttp3.logging.HttpLoggingInterceptor.Level.BODY
             }
 
             val client = okhttp3.OkHttpClient.Builder()
