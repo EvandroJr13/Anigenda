@@ -6,8 +6,8 @@ import com.squareup.moshi.JsonClass
 import java.util.Calendar
 
 data class GraphQLPayload(
-    @SerializedName("query") val query: String,
-    @SerializedName("variables") val variables: Map<String, Any?> = emptyMap()
+    @SerializedName("query") @field:Json(name = "query") val query: String,
+    @SerializedName("variables") @field:Json(name = "variables") val variables: Map<String, Any?> = emptyMap()
 )
 
 @JsonClass(generateAdapter = true)

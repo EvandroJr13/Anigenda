@@ -80,7 +80,7 @@ object RetrofitClient {
         val loggingInterceptor = HttpLoggingInterceptor { message ->
             Log.d("AniListHttp", message)
         }.apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = HttpLoggingInterceptor.Level.BASIC
         }
         val builder = OkHttpClient.Builder()
             .addInterceptor(UserAgentInterceptor())
