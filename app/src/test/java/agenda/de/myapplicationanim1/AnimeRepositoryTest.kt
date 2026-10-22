@@ -1,9 +1,9 @@
 package agenda.de.myapplicationanim1
 
-import agenda.de.myapplicationanim1.data.model.AniListAiringSchedule
 import agenda.de.myapplicationanim1.data.model.AniListCoverImage
 import agenda.de.myapplicationanim1.data.model.AniListData
 import agenda.de.myapplicationanim1.data.model.AniListMedia
+import agenda.de.myapplicationanim1.data.model.AniListNextAiringEpisode
 import agenda.de.myapplicationanim1.data.model.AniListPage
 import agenda.de.myapplicationanim1.data.model.AniListResponse
 import agenda.de.myapplicationanim1.data.model.AniListTitle
@@ -46,17 +46,16 @@ class AnimeRepositoryTest {
                     AniListResponse(
                         data = AniListData(
                             page = AniListPage(
-                                airingSchedules = listOf(
-                                    AniListAiringSchedule(
-                                        id = 1,
-                                        airingAt = System.currentTimeMillis() / 1000L,
-                                        episode = 1,
-                                        media = AniListMedia(
-                                            id = 101,
-                                            title = AniListTitle(english = "Solo Leveling"),
-                                            coverImage = AniListCoverImage(large = "http://example.com/cover.jpg"),
-                                            averageScore = 85.0,
-                                            status = "RELEASING"
+                                media = listOf(
+                                    AniListMedia(
+                                        id = 101,
+                                        title = AniListTitle(english = "Solo Leveling"),
+                                        coverImage = AniListCoverImage(large = "http://example.com/cover.jpg"),
+                                        averageScore = 85.0,
+                                        status = "RELEASING",
+                                        nextAiringEpisode = AniListNextAiringEpisode(
+                                            airingAt = System.currentTimeMillis() / 1000L,
+                                            episode = 1
                                         )
                                     )
                                 )

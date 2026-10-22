@@ -3,7 +3,7 @@ package agenda.de.myapplicationanim1.data.repository
 import android.util.Log
 import agenda.de.myapplicationanim1.data.model.Anime
 import agenda.de.myapplicationanim1.data.model.GraphQLPayload
-import agenda.de.myapplicationanim1.data.model.getDayOfWeekFromTimestamp
+import agenda.de.myapplicationanim1.data.model.getCalculatedWeekdayPt
 import agenda.de.myapplicationanim1.data.model.toDomain
 import agenda.de.myapplicationanim1.data.remote.AniListApiService
 import agenda.de.myapplicationanim1.data.util.Resource
@@ -11,10 +11,22 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import java.util.Calendar
+import java.util.Locale
 
 class AnimeRepositoryImpl(
     private val aniListApiService: AniListApiService = AniListApiService.create()
 ) : AnimeRepository {
+
+    private fun getStartDateInt3MonthsAgo(): Int {
+        val cal = Calendar.getInstance().apply {
+            add(Calendar.DAY_OF_YEAR, -90)
+        }
+        val year = cal.get(Calendar.YEAR)
+        val month = cal.get(Calendar.MONTH) + 1
+        val day = cal.get(Calendar.DAY_OF_MONTH)
+        return String.format(Locale.US, "%04d%02d%02d", year, month, day).toInt()
+    }
 
     private fun safeLogE(tag: String, msg: String, tr: Throwable? = null) {
         try {
@@ -28,67 +40,49 @@ class AnimeRepositoryImpl(
         emit(Resource.Loading)
         try {
             val query = """
-                query (${'$'}page: Int, ${'$'}perPage: Int) {
-                  Page(page: ${'$'}page, perPage: ${'$'}perPage) {
-                    airingSchedules(notYetAired: true, sort: TIME) {
-                      episode
-                      airingAt
-                      media {
-                        id
-                        title {
-                          english
-                          romaji
-                          native
-                        }
-                        coverImage {
-                          extraLarge
-                          large
-                        }
-                        description
-                        averageScore
-                        episodes
-                        status
-                        genres
-                        isAdult
-                        externalLinks {
-                          site
-                          url
-                        }
-                      }
+                query {
+                  Page(page: 1, perPage: 50) {
+                    media(status: RELEASING, type: ANIME, sort: POPULARITY_DESC) {
+                      id
+                      title { english romaji native }
+                      coverImage { extraLarge large }
+                      averageScore
+                      episodes
+                      genres
+                      description(asHtml: false)
+                      trailer { id site }
+                      nextAiringEpisode { airingAt episode }
+                      startDate { year month day }
+                      isAdult
+                      externalLinks { site url }
                     }
                   }
                 }
             """.trimIndent()
 
-            val payload = GraphQLPayload(
-                query = query,
-                variables = mapOf("page" to 1, "perPage" to 50)
-            )
-
+            val payload = GraphQLPayload(query = query)
             val response = aniListApiService.getAnimesDeHoje(payload)
+
             if (response.isSuccessful) {
-                val schedulesList = response.body()?.data?.page?.airingSchedules ?: emptyList()
+                val mediaList = response.body()?.data?.page?.media ?: emptyList()
+                val nonAdult = mediaList.filter { it.isAdult != true }
 
-                val domainList = schedulesList
-                    .mapNotNull { schedule ->
-                        val media = schedule.media ?: return@mapNotNull null
-                        if (media.isAdult == true) return@mapNotNull null
-
-                        val calculatedDay = getDayOfWeekFromTimestamp(schedule.airingAt)
-                        val finalDay = calculatedDay.takeIf { it.isNotBlank() } ?: filter ?: "Segunda"
-
-                        media.toDomain(overrideDay = finalDay)
-                    }
-
-                val filteredList = if (!filter.isNullOrBlank()) {
+                val domainList = if (!filter.isNullOrBlank()) {
                     val normFilter = filter.trim().lowercase()
-                    val matching = domainList.filter { it.airingDay.lowercase() == normFilter }
-                    if (matching.isNotEmpty()) matching else domainList.map { it.copy(airingDay = filter) }
+                    val filteredMedia = nonAdult.filter { media ->
+                        val dayPt = media.getCalculatedWeekdayPt()?.lowercase()
+                        dayPt == null || dayPt == normFilter
+                    }
+                    if (filteredMedia.isNotEmpty()) {
+                        filteredMedia.map { it.toDomain(overrideDay = filter) }
+                    } else {
+                        nonAdult.map { it.toDomain(overrideDay = filter) }
+                    }
                 } else {
-                    domainList
+                    nonAdult.map { it.toDomain() }
                 }
 
-                emit(Resource.Success(filteredList))
+                emit(Resource.Success(domainList))
             } else {
                 emit(Resource.Error("Erro na API AniList: HTTP ${response.code()}"))
             }
@@ -101,30 +95,23 @@ class AnimeRepositoryImpl(
     override fun getPopularAnime(): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
         try {
+            val startDateInt = getStartDateInt3MonthsAgo()
             val query = """
-                query (${'$'}page: Int, ${'$'}perPage: Int) {
-                  Page(page: ${'$'}page, perPage: ${'$'}perPage) {
-                    media(type: ANIME, sort: [POPULARITY_DESC, SCORE_DESC], isAdult: false) {
+                query (${'$'}startDate: Int) {
+                  Page(page: 1, perPage: 24) {
+                    media(startDate_greater: ${'$'}startDate, type: ANIME, sort: [SCORE_DESC, POPULARITY_DESC]) {
                       id
-                      title {
-                        english
-                        romaji
-                        native
-                      }
-                      coverImage {
-                        extraLarge
-                        large
-                      }
-                      description
+                      title { english romaji native }
+                      coverImage { extraLarge large }
                       averageScore
                       episodes
-                      status
                       genres
+                      description(asHtml: false)
+                      trailer { id site }
+                      nextAiringEpisode { airingAt episode }
+                      startDate { year month day }
                       isAdult
-                      externalLinks {
-                        site
-                        url
-                      }
+                      externalLinks { site url }
                     }
                   }
                 }
@@ -132,12 +119,38 @@ class AnimeRepositoryImpl(
 
             val payload = GraphQLPayload(
                 query = query,
-                variables = mapOf("page" to 1, "perPage" to 24)
+                variables = mapOf("startDate" to startDateInt)
             )
 
             val response = aniListApiService.getAnimesDeHoje(payload)
             if (response.isSuccessful) {
-                val mediaList = response.body()?.data?.page?.media ?: emptyList()
+                var mediaList = response.body()?.data?.page?.media ?: emptyList()
+
+                if (mediaList.isEmpty()) {
+                    val fallbackQuery = """
+                        query {
+                          Page(page: 1, perPage: 24) {
+                            media(type: ANIME, sort: [SCORE_DESC, POPULARITY_DESC]) {
+                              id
+                              title { english romaji native }
+                              coverImage { extraLarge large }
+                              averageScore
+                              episodes
+                              genres
+                              description(asHtml: false)
+                              trailer { id site }
+                              nextAiringEpisode { airingAt episode }
+                              startDate { year month day }
+                              isAdult
+                              externalLinks { site url }
+                            }
+                          }
+                        }
+                    """.trimIndent()
+                    val fallbackResp = aniListApiService.getAnimesDeHoje(GraphQLPayload(query = fallbackQuery))
+                    mediaList = fallbackResp.body()?.data?.page?.media ?: emptyList()
+                }
+
                 val domainList = mediaList
                     .filter { it.isAdult != true }
                     .map { it.toDomain() }
@@ -155,37 +168,37 @@ class AnimeRepositoryImpl(
         emit(Resource.Loading)
         try {
             val gqlQuery = """
-                query (${'$'}search: String, ${'$'}page: Int, ${'$'}perPage: Int) {
-                  Page(page: ${'$'}page, perPage: ${'$'}perPage) {
-                    media(search: ${'$'}search, type: ANIME, sort: [POPULARITY_DESC], isAdult: false) {
+                query (${'$'}search: String, ${'$'}genre: String) {
+                  Page(page: 1, perPage: 28) {
+                    media(search: ${'$'}search, genre: ${'$'}genre, type: ANIME, sort: POPULARITY_DESC) {
                       id
-                      title {
-                        english
-                        romaji
-                        native
-                      }
-                      coverImage {
-                        extraLarge
-                        large
-                      }
-                      description
+                      title { english romaji native }
+                      coverImage { extraLarge large }
                       averageScore
                       episodes
-                      status
                       genres
+                      description(asHtml: false)
+                      trailer { id site }
+                      nextAiringEpisode { airingAt episode }
+                      startDate { year month day }
                       isAdult
-                      externalLinks {
-                        site
-                        url
-                      }
+                      externalLinks { site url }
                     }
                   }
                 }
             """.trimIndent()
 
+            val variables = mutableMapOf<String, Any?>()
+            if (query.isNotBlank()) {
+                variables["search"] = query
+            }
+            if (!genre.isNullOrBlank() && genre != "Todos") {
+                variables["genre"] = genre
+            }
+
             val payload = GraphQLPayload(
                 query = gqlQuery,
-                variables = mapOf("search" to query, "page" to 1, "perPage" to 50)
+                variables = variables
             )
 
             val response = aniListApiService.getAnimesDeHoje(payload)
@@ -211,25 +224,17 @@ class AnimeRepositoryImpl(
                 query (${'$'}id: Int) {
                   Media(id: ${'$'}id, type: ANIME) {
                     id
-                    title {
-                      english
-                      romaji
-                      native
-                    }
-                    coverImage {
-                      extraLarge
-                      large
-                    }
-                    description
+                    title { english romaji native }
+                    coverImage { extraLarge large }
+                    description(asHtml: false)
                     averageScore
                     episodes
                     status
                     genres
+                    trailer { id site }
+                    startDate { year month day }
                     isAdult
-                    externalLinks {
-                      site
-                      url
-                    }
+                    externalLinks { site url }
                   }
                 }
             """.trimIndent()
