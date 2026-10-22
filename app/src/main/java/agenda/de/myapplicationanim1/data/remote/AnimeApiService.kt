@@ -11,21 +11,17 @@ import retrofit2.http.Query
 
 interface AnimeApiService {
 
-    // 1. Current Season Anime (TV Series currently airing this season)
     @GET("seasons/now")
     suspend fun getCurrentSeasonAnime(
-        @Query("filter") filter: String? = "tv",
         @Query("page") page: Int = 1
     ): AnimeListResponse
 
-    // 2. Animes do Dia / Calendário de Lançamentos
     @GET("schedules")
     suspend fun getDailySchedule(
-        @Query("filter") day: String? = null, // Ex: "monday", "tuesday". Se nulo, traz o dia atual
-        @Query("type") type: String? = "tv"    // Strictly filter TV series
+        @Query("filter") day: String? = null,
+        @Query("type") type: String? = "tv"
     ): AnimeListResponse
 
-    // 3. Animes Mais Populares
     @GET("top/anime")
     suspend fun getPopularAnimes(
         @Query("filter") filter: String = "bypopularity",
@@ -33,19 +29,16 @@ interface AnimeApiService {
         @Query("page") page: Int = 1
     ): AnimeListResponse
 
-    // 4. Puxar Plataformas de Streaming do Anime
     @GET("anime/{id}/streaming")
     suspend fun getAnimeStreamingPlatforms(
         @Path("id") animeId: Int
     ): StreamingLinksResponse
 
-    // 5. Detalhes de um anime
     @GET("anime/{id}")
     suspend fun getAnimeDetails(
         @Path("id") animeId: Int
     ): AnimeDetailResponse
 
-    // 6. Busca de animes por texto
     @GET("anime")
     suspend fun searchAnimes(
         @Query("q") query: String,
@@ -59,7 +52,7 @@ interface AnimeApiService {
             val loggingInterceptor = okhttp3.logging.HttpLoggingInterceptor { message ->
                 android.util.Log.d("JikanHttp", message)
             }.apply {
-                level = okhttp3.logging.HttpLoggingInterceptor.Level.BASIC
+                level = okhttp3.logging.HttpLoggingInterceptor.Level.BODY
             }
 
             val client = okhttp3.OkHttpClient.Builder()
