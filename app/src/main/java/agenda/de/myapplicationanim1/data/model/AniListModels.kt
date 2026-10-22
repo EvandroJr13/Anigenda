@@ -1,74 +1,75 @@
 package agenda.de.myapplicationanim1.data.model
 
+import com.google.gson.annotations.SerializedName
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import java.util.Calendar
 
 data class GraphQLPayload(
-    val query: String,
-    val variables: Map<String, Any?> = emptyMap()
+    @SerializedName("query") val query: String,
+    @SerializedName("variables") val variables: Map<String, Any?> = emptyMap()
 )
 
 @JsonClass(generateAdapter = true)
 data class AniListResponse(
-    @field:Json(name = "data") val data: AniListData? = null
+    @SerializedName("data") @field:Json(name = "data") val data: AniListData? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class AniListData(
-    @field:Json(name = "Page") val page: AniListPage? = null,
-    @field:Json(name = "Media") val media: AniListMedia? = null
+    @SerializedName("Page") @field:Json(name = "Page") val page: AniListPage? = null,
+    @SerializedName("Media") @field:Json(name = "Media") val media: AniListMedia? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class AniListPage(
-    @field:Json(name = "media") val media: List<AniListMedia>? = emptyList(),
-    @field:Json(name = "airingSchedules") val airingSchedules: List<AniListAiringSchedule>? = emptyList()
+    @SerializedName("media") @field:Json(name = "media") val media: List<AniListMedia>? = emptyList(),
+    @SerializedName("airingSchedules") @field:Json(name = "airingSchedules") val airingSchedules: List<AniListAiringSchedule>? = emptyList()
 )
 
 @JsonClass(generateAdapter = true)
 data class AniListAiringSchedule(
-    @field:Json(name = "id") val id: Int,
-    @field:Json(name = "airingAt") val airingAt: Long,
-    @field:Json(name = "episode") val episode: Int,
-    @field:Json(name = "media") val media: AniListMedia? = null
+    @SerializedName("id") @field:Json(name = "id") val id: Int,
+    @SerializedName("airingAt") @field:Json(name = "airingAt") val airingAt: Long,
+    @SerializedName("episode") @field:Json(name = "episode") val episode: Int,
+    @SerializedName("media") @field:Json(name = "media") val media: AniListMedia? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class AniListMedia(
-    @field:Json(name = "id") val id: Int,
-    @field:Json(name = "title") val title: AniListTitle? = null,
-    @field:Json(name = "coverImage") val coverImage: AniListCoverImage? = null,
-    @field:Json(name = "description") val description: String? = null,
-    @field:Json(name = "averageScore") val averageScore: Double? = null,
-    @field:Json(name = "episodes") val episodes: Int? = null,
-    @field:Json(name = "status") val status: String? = null,
-    @field:Json(name = "nextAiringEpisode") val nextAiringEpisode: AniListNextAiringEpisode? = null,
-    @field:Json(name = "startDate") val startDate: AniListFuzzyDate? = null,
-    @field:Json(name = "genres") val genres: List<String>? = emptyList(),
-    @field:Json(name = "trailer") val trailer: AniListTrailer? = null,
-    @field:Json(name = "isAdult") val isAdult: Boolean? = false,
-    @field:Json(name = "externalLinks") val externalLinks: List<AniListExternalLink>? = emptyList()
+    @SerializedName("id") @field:Json(name = "id") val id: Int,
+    @SerializedName("title") @field:Json(name = "title") val title: AniListTitle? = null,
+    @SerializedName("coverImage") @field:Json(name = "coverImage") val coverImage: AniListCoverImage? = null,
+    @SerializedName("description") @field:Json(name = "description") val description: String? = null,
+    @SerializedName("averageScore") @field:Json(name = "averageScore") val averageScore: Double? = null,
+    @SerializedName("episodes") @field:Json(name = "episodes") val episodes: Int? = null,
+    @SerializedName("status") @field:Json(name = "status") val status: String? = null,
+    @SerializedName("nextAiringEpisode") @field:Json(name = "nextAiringEpisode") val nextAiringEpisode: AniListNextAiringEpisode? = null,
+    @SerializedName("startDate") @field:Json(name = "startDate") val startDate: AniListFuzzyDate? = null,
+    @SerializedName("genres") @field:Json(name = "genres") val genres: List<String>? = emptyList(),
+    @SerializedName("trailer") @field:Json(name = "trailer") val trailer: AniListTrailer? = null,
+    @SerializedName("isAdult") @field:Json(name = "isAdult") val isAdult: Boolean? = false,
+    @SerializedName("externalLinks") @field:Json(name = "externalLinks") val externalLinks: List<AniListExternalLink>? = emptyList()
 )
 
 @JsonClass(generateAdapter = true)
 data class AniListFuzzyDate(
-    @field:Json(name = "year") val year: Int? = null,
-    @field:Json(name = "month") val month: Int? = null,
-    @field:Json(name = "day") val day: Int? = null
+    @SerializedName("year") @field:Json(name = "year") val year: Int? = null,
+    @SerializedName("month") @field:Json(name = "month") val month: Int? = null,
+    @SerializedName("day") @field:Json(name = "day") val day: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class AniListTrailer(
-    @field:Json(name = "id") val id: String? = null,
-    @field:Json(name = "site") val site: String? = null
+    @SerializedName("id") @field:Json(name = "id") val id: String? = null,
+    @SerializedName("site") @field:Json(name = "site") val site: String? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class AniListTitle(
-    @field:Json(name = "english") val english: String? = null,
-    @field:Json(name = "romaji") val romaji: String? = null,
-    @field:Json(name = "native") val nativeTitle: String? = null
+    @SerializedName("english") @field:Json(name = "english") val english: String? = null,
+    @SerializedName("romaji") @field:Json(name = "romaji") val romaji: String? = null,
+    @SerializedName("native") @field:Json(name = "native") val nativeTitle: String? = null
 ) {
     fun getDisplayName(): String {
         return english?.takeIf { it.isNotBlank() } ?: romaji ?: nativeTitle ?: "Unknown Title"
@@ -77,20 +78,20 @@ data class AniListTitle(
 
 @JsonClass(generateAdapter = true)
 data class AniListCoverImage(
-    @field:Json(name = "extraLarge") val extraLarge: String? = null,
-    @field:Json(name = "large") val large: String? = null
+    @SerializedName("extraLarge") @field:Json(name = "extraLarge") val extraLarge: String? = null,
+    @SerializedName("large") @field:Json(name = "large") val large: String? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class AniListNextAiringEpisode(
-    @field:Json(name = "airingAt") val airingAt: Long? = null,
-    @field:Json(name = "episode") val episode: Int? = null
+    @SerializedName("airingAt") @field:Json(name = "airingAt") val airingAt: Long? = null,
+    @SerializedName("episode") @field:Json(name = "episode") val episode: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class AniListExternalLink(
-    @field:Json(name = "site") val site: String,
-    @field:Json(name = "url") val url: String? = null
+    @SerializedName("site") @field:Json(name = "site") val site: String,
+    @SerializedName("url") @field:Json(name = "url") val url: String? = null
 )
 
 fun AniListMedia.getCalculatedWeekdayPt(): String? {
