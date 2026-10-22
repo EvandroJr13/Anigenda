@@ -3,6 +3,7 @@ package agenda.de.myapplicationanim1.data.repository
 import android.util.Log
 import agenda.de.myapplicationanim1.data.model.Anime
 import agenda.de.myapplicationanim1.data.model.GraphQLPayload
+import agenda.de.myapplicationanim1.data.model.getDayOfWeekFromTimestamp
 import agenda.de.myapplicationanim1.data.model.toDomain
 import agenda.de.myapplicationanim1.data.remote.AniListApiService
 import agenda.de.myapplicationanim1.data.util.Resource
@@ -10,10 +11,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import java.util.Calendar
 
 class AnimeRepositoryImpl(
     private val aniListApiService: AniListApiService = AniListApiService.create()
 ) : AnimeRepository {
+
+    private fun currentYear(): Int {
+        return Calendar.getInstance().get(Calendar.YEAR)
+    }
 
     private fun safeLogE(tag: String, msg: String, tr: Throwable? = null) {
         try {
@@ -26,10 +32,11 @@ class AnimeRepositoryImpl(
     override fun getSchedules(filter: String?): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
         try {
+            val currentYr = currentYear()
             val query = """
-                query (${'$'}page: Int, ${'$'}perPage: Int) {
+                query (${'$'}seasonYear: Int, ${'$'}page: Int, ${'$'}perPage: Int) {
                   Page(page: ${'$'}page, perPage: ${'$'}perPage) {
-                    media(type: ANIME, status: RELEASING, sort: [POPULARITY_DESC], isAdult: false) {
+                    media(seasonYear: ${'$'}seasonYear, type: ANIME, status: RELEASING, sort: [POPULARITY_DESC], isAdult: false) {
                       id
                       title {
                         english
@@ -61,16 +68,68 @@ class AnimeRepositoryImpl(
 
             val payload = GraphQLPayload(
                 query = query,
-                variables = mapOf("page" to 1, "perPage" to 50)
+                variables = mapOf("seasonYear" to currentYr, "page" to 1, "perPage" to 50)
             )
 
             val response = aniListApiService.getAnimesDeHoje(payload)
             if (response.isSuccessful) {
-                val mediaList = response.body()?.data?.page?.media ?: emptyList()
+                var mediaList = response.body()?.data?.page?.media ?: emptyList()
+
+                if (mediaList.isEmpty()) {
+                    val fallbackQuery = """
+                        query (${'$'}page: Int, ${'$'}perPage: Int) {
+                          Page(page: ${'$'}page, perPage: ${'$'}perPage) {
+                            media(type: ANIME, status: RELEASING, sort: [POPULARITY_DESC], isAdult: false) {
+                              id
+                              title {
+                                english
+                                romaji
+                                native
+                              }
+                              coverImage {
+                                extraLarge
+                                large
+                              }
+                              description
+                              averageScore
+                              episodes
+                              status
+                              nextAiringEpisode {
+                                airingAt
+                                episode
+                              }
+                              genres
+                              isAdult
+                              externalLinks {
+                                site
+                                url
+                              }
+                            }
+                          }
+                        }
+                    """.trimIndent()
+                    val fallbackPayload = GraphQLPayload(query = fallbackQuery, variables = mapOf("page" to 1, "perPage" to 50))
+                    val fallbackResp = aniListApiService.getAnimesDeHoje(fallbackPayload)
+                    mediaList = fallbackResp.body()?.data?.page?.media ?: emptyList()
+                }
+
                 val domainList = mediaList
                     .filter { it.isAdult != true }
-                    .map { it.toDomain(overrideDay = filter) }
-                emit(Resource.Success(domainList))
+                    .map { media ->
+                        val calculatedDay = media.nextAiringEpisode?.airingAt?.let { getDayOfWeekFromTimestamp(it) }
+                        val finalDay = calculatedDay?.takeIf { it.isNotBlank() } ?: filter ?: "Segunda"
+                        media.toDomain(overrideDay = finalDay)
+                    }
+
+                val filteredList = if (!filter.isNullOrBlank()) {
+                    val normFilter = filter.trim().lowercase()
+                    val matching = domainList.filter { it.airingDay.lowercase() == normFilter }
+                    if (matching.isNotEmpty()) matching else domainList.map { it.copy(airingDay = filter) }
+                } else {
+                    domainList
+                }
+
+                emit(Resource.Success(filteredList))
             } else {
                 emit(Resource.Error("Erro na API AniList: HTTP ${response.code()}"))
             }
@@ -83,10 +142,11 @@ class AnimeRepositoryImpl(
     override fun getPopularAnime(): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
         try {
+            val currentYr = currentYear()
             val query = """
-                query (${'$'}page: Int, ${'$'}perPage: Int) {
+                query (${'$'}seasonYear: Int, ${'$'}page: Int, ${'$'}perPage: Int) {
                   Page(page: ${'$'}page, perPage: ${'$'}perPage) {
-                    media(type: ANIME, sort: [POPULARITY_DESC, SCORE_DESC], isAdult: false) {
+                    media(seasonYear: ${'$'}seasonYear, type: ANIME, sort: [POPULARITY_DESC, SCORE_DESC], isAdult: false) {
                       id
                       title {
                         english
@@ -114,12 +174,47 @@ class AnimeRepositoryImpl(
 
             val payload = GraphQLPayload(
                 query = query,
-                variables = mapOf("page" to 1, "perPage" to 24)
+                variables = mapOf("seasonYear" to currentYr, "page" to 1, "perPage" to 24)
             )
 
             val response = aniListApiService.getAnimesDeHoje(payload)
             if (response.isSuccessful) {
-                val mediaList = response.body()?.data?.page?.media ?: emptyList()
+                var mediaList = response.body()?.data?.page?.media ?: emptyList()
+
+                if (mediaList.isEmpty()) {
+                    val fallbackQuery = """
+                        query (${'$'}page: Int, ${'$'}perPage: Int) {
+                          Page(page: ${'$'}page, perPage: ${'$'}perPage) {
+                            media(type: ANIME, sort: [POPULARITY_DESC, SCORE_DESC], isAdult: false) {
+                              id
+                              title {
+                                english
+                                romaji
+                                native
+                              }
+                              coverImage {
+                                extraLarge
+                                large
+                              }
+                              description
+                              averageScore
+                              episodes
+                              status
+                              genres
+                              isAdult
+                              externalLinks {
+                                site
+                                url
+                              }
+                            }
+                          }
+                        }
+                    """.trimIndent()
+                    val fallbackPayload = GraphQLPayload(query = fallbackQuery, variables = mapOf("page" to 1, "perPage" to 24))
+                    val fallbackResp = aniListApiService.getAnimesDeHoje(fallbackPayload)
+                    mediaList = fallbackResp.body()?.data?.page?.media ?: emptyList()
+                }
+
                 val domainList = mediaList
                     .filter { it.isAdult != true }
                     .map { it.toDomain() }

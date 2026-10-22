@@ -12,7 +12,7 @@ import retrofit2.http.POST
 interface AniListApiService {
 
     @Headers("Content-Type: application/json", "Accept: application/json")
-    @POST("/")
+    @POST("https://graphql.anilist.co/")
     suspend fun getAnimesDeHoje(@Body payload: GraphQLPayload): Response<AniListResponse>
 
     companion object {
