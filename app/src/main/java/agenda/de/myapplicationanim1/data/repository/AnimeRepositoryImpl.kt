@@ -36,6 +36,20 @@ class AnimeRepositoryImpl(
         }
     }
 
+    private fun buildDiagnosticErrorMessage(cause: String): String {
+        return """
+            $cause
+            
+            Por favor, compartilhe conosco:
+            
+            O Logcat do erro: Reproduza o erro no seu Android Studio e copie a linha vermelha do Logcat (ou o JSON completo que o AniList está retornando, caso tenha ativado o HttpLoggingInterceptor).
+            
+            Sua interface Retrofit (AniListApiService): Como está estruturada a chamada do endpoint e a anotação (@POST, @Headers, etc.).
+            
+            O modelo do payload (GraphQLPayload): Como você está enviando a query e as variáveis para a API.
+        """.trimIndent()
+    }
+
     override fun getSchedules(filter: String?): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
         try {
@@ -84,11 +98,11 @@ class AnimeRepositoryImpl(
 
                 emit(Resource.Success(domainList))
             } else {
-                emit(Resource.Error("Erro na API AniList: HTTP ${response.code()}"))
+                emit(Resource.Error(buildDiagnosticErrorMessage("Erro na API AniList: HTTP ${response.code()}")))
             }
         } catch (e: Exception) {
             safeLogE("AnimeRepository", "Erro ao carregar AniList: ${e.message}", e)
-            emit(Resource.Error("Erro ao carregar programação: ${e.localizedMessage ?: e.message}", e))
+            emit(Resource.Error(buildDiagnosticErrorMessage("Erro ao carregar programação: ${e.localizedMessage ?: e.message}")))
         }
     }.flowOn(Dispatchers.IO)
 
@@ -156,11 +170,11 @@ class AnimeRepositoryImpl(
                     .map { it.toDomain() }
                 emit(Resource.Success(domainList))
             } else {
-                emit(Resource.Error("Erro ao carregar animes populares"))
+                emit(Resource.Error(buildDiagnosticErrorMessage("Erro ao carregar animes populares: HTTP ${response.code()}")))
             }
         } catch (e: Exception) {
             safeLogE("AnimeRepository", "Erro animes populares AniList: ${e.message}", e)
-            emit(Resource.Error("Erro ao carregar populares: ${e.localizedMessage ?: e.message}", e))
+            emit(Resource.Error(buildDiagnosticErrorMessage("Erro ao carregar populares: ${e.localizedMessage ?: e.message}")))
         }
     }.flowOn(Dispatchers.IO)
 
@@ -209,11 +223,11 @@ class AnimeRepositoryImpl(
                     .map { it.toDomain() }
                 emit(Resource.Success(domainList))
             } else {
-                emit(Resource.Error("Erro na busca"))
+                emit(Resource.Error(buildDiagnosticErrorMessage("Erro na busca: HTTP ${response.code()}")))
             }
         } catch (e: Exception) {
             safeLogE("AnimeRepository", "Erro na busca AniList: ${e.message}", e)
-            emit(Resource.Error("Erro na busca: ${e.localizedMessage ?: e.message}", e))
+            emit(Resource.Error(buildDiagnosticErrorMessage("Erro na busca: ${e.localizedMessage ?: e.message}")))
         }
     }.flowOn(Dispatchers.IO)
 
@@ -250,14 +264,14 @@ class AnimeRepositoryImpl(
                 if (mediaDto != null) {
                     emit(Resource.Success(mediaDto.toDomain()))
                 } else {
-                    emit(Resource.Error("Detalhes do anime não encontrados"))
+                    emit(Resource.Error(buildDiagnosticErrorMessage("Detalhes do anime não encontrados")))
                 }
             } else {
-                emit(Resource.Error("Erro ao carregar detalhes"))
+                emit(Resource.Error(buildDiagnosticErrorMessage("Erro ao carregar detalhes: HTTP ${response.code()}")))
             }
         } catch (e: Exception) {
             safeLogE("AnimeRepository", "Erro nos detalhes AniList: ${e.message}", e)
-            emit(Resource.Error("Erro ao carregar detalhes: ${e.localizedMessage ?: e.message}", e))
+            emit(Resource.Error(buildDiagnosticErrorMessage("Erro ao carregar detalhes: ${e.localizedMessage ?: e.message}")))
         }
     }.flowOn(Dispatchers.IO)
 }
