@@ -18,6 +18,20 @@ class AnimeRepositoryImpl(
     private val aniListApiService: AniListApiService = AniListApiService.create()
 ) : AnimeRepository {
 
+    private fun getCurrentSeasonAndYear(): Pair<String, Int> {
+        val cal = Calendar.getInstance()
+        val year = cal.get(Calendar.YEAR)
+        val month = cal.get(Calendar.MONTH) + 1
+        val season = when (month) {
+            1, 2, 3 -> "WINTER"
+            4, 5, 6 -> "SPRING"
+            7, 8, 9 -> "SUMMER"
+            10, 11, 12 -> "FALL"
+            else -> "SPRING"
+        }
+        return Pair(season, year)
+    }
+
     private fun getStartDateInt3MonthsAgo(): Int {
         val cal = Calendar.getInstance().apply {
             add(Calendar.DAY_OF_YEAR, -90)
@@ -53,16 +67,16 @@ class AnimeRepositoryImpl(
     override fun getSchedules(filter: String?): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
         try {
+            val (season, year) = getCurrentSeasonAndYear()
             val query = """
-                query {
-                  Page(page: 1, perPage: 50) {
-                    media(status: RELEASING, type: ANIME, sort: POPULARITY_DESC) {
+                query (${'$'}page: Int, ${'$'}perPage: Int, ${'$'}season: MediaSeason, ${'$'}year: Int) {
+                  Page(page: ${'$'}page, perPage: ${'$'}perPage) {
+                    media(type: ANIME, season: ${'$'}season, seasonYear: ${'$'}year, sort: [POPULARITY_DESC]) {
                       id
                       title { english romaji native }
                       coverImage { extraLarge large }
                       averageScore
                       episodes
-                      genres
                       description(asHtml: false)
                       trailer { id site }
                       nextAiringEpisode { airingAt episode }
@@ -74,11 +88,44 @@ class AnimeRepositoryImpl(
                 }
             """.trimIndent()
 
-            val payload = GraphQLPayload(query = query)
-            val response = aniListApiService.getAnimesDeHoje(payload)
+            val payload = GraphQLPayload(
+                query = query,
+                variables = mapOf(
+                    "page" to 1,
+                    "perPage" to 50,
+                    "season" to season,
+                    "year" to year
+                )
+            )
 
+            val response = aniListApiService.getAnimesDeHoje(payload)
             if (response.isSuccessful) {
-                val mediaList = response.body()?.data?.page?.media ?: emptyList()
+                var mediaList = response.body()?.data?.page?.media ?: emptyList()
+
+                if (mediaList.isEmpty()) {
+                    val fallbackQuery = """
+                        query (${'$'}page: Int, ${'$'}perPage: Int) {
+                          Page(page: ${'$'}page, perPage: ${'$'}perPage) {
+                            media(type: ANIME, status: RELEASING, sort: [POPULARITY_DESC], isAdult: false) {
+                              id
+                              title { english romaji native }
+                              coverImage { extraLarge large }
+                              averageScore
+                              episodes
+                              description(asHtml: false)
+                              trailer { id site }
+                              nextAiringEpisode { airingAt episode }
+                              startDate { year month day }
+                              isAdult
+                              externalLinks { site url }
+                            }
+                          }
+                        }
+                    """.trimIndent()
+                    val fallbackResp = aniListApiService.getAnimesDeHoje(GraphQLPayload(query = fallbackQuery, variables = mapOf("page" to 1, "perPage" to 50)))
+                    mediaList = fallbackResp.body()?.data?.page?.media ?: emptyList()
+                }
+
                 val nonAdult = mediaList.filter { it.isAdult != true }
 
                 val domainList = if (!filter.isNullOrBlank()) {
