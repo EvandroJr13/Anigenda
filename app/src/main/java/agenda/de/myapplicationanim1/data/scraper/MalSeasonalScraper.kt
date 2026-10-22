@@ -5,9 +5,10 @@ import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Calendar
 
 /**
- * Item de anime sazonal extraído diretamente do site oficial do MyAnimeList (https://myanimelist.net/anime/season).
+ * Item de anime sazonal extraído diretamente do site oficial do MyAnimeList para o ano atual (2026).
  */
 data class SeasonalAnimeItem(
     val id: String,
@@ -22,16 +23,27 @@ data class SeasonalAnimeItem(
 class MalSeasonalScraper {
 
     companion object {
-        private const val SEASON_URL = "https://myanimelist.net/anime/season"
         private const val USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     }
 
     /**
-     * Faz o Web Scraping em tempo real da página de temporada do MyAnimeList.
+     * Faz o Web Scraping em tempo real da página de temporada atual do MyAnimeList (ano 2026).
      */
     suspend fun scrapeSeasonalAnimes(): List<SeasonalAnimeItem> = withContext(Dispatchers.IO) {
         try {
-            val doc = Jsoup.connect(SEASON_URL)
+            val cal = Calendar.getInstance()
+            val year = cal.get(Calendar.YEAR) // 2026
+            val month = cal.get(Calendar.MONTH) + 1
+            val season = when (month) {
+                1, 2, 3 -> "winter"
+                4, 5, 6 -> "spring"
+                7, 8, 9 -> "summer"
+                10, 11, 12 -> "fall"
+                else -> "winter"
+            }
+            val dynamicUrl = "https://myanimelist.net/anime/season/$year/$season"
+
+            val doc = Jsoup.connect(dynamicUrl)
                 .userAgent(USER_AGENT)
                 .header("Accept-Language", "en-US,en;q=0.9")
                 .timeout(30000)
@@ -61,7 +73,7 @@ class MalSeasonalScraper {
                     // Data de Lançamento / PV / Aired (mm/dd/yyyy convertido para dd/mm/yyyy)
                     val airedElem = card.select("div.info span.item, div.broadcast, div.property").first()
                     val rawDateText = airedElem?.text()?.trim() ?: ""
-                    val formattedDate = parseAndConvertDate(rawDateText)
+                    val formattedDate = parseAndConvertDate(rawDateText, year)
 
                     // Link do PV / Trailer
                     val pvLink = card.select("a.js-video-link, a.iframe, a.video-promo").first()?.attr("href")
@@ -93,30 +105,28 @@ class MalSeasonalScraper {
     }
 
     /**
-     * Converte datas no formato mm/dd/yyyy (ou texto equivalente) para dd/mm/yyyy.
+     * Converte datas no formato mm/dd/yyyy (ou texto equivalente) para dd/mm/yyyy no ano atual (2026).
      */
-    private fun parseAndConvertDate(dateStr: String): String {
+    private fun parseAndConvertDate(dateStr: String, currentYear: Int): String {
         if (dateStr.isBlank()) {
-            val now = LocalDate.now()
-            return now.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+            return "01/01/$currentYear"
         }
         return try {
-            // Se houver padrão mm/dd/yyyy no texto
             val pattern = Regex("(\\d{1,2})/(\\d{1,2})/(\\d{4})")
             val match = pattern.find(dateStr)
             if (match != null) {
                 val mm = match.groupValues[1].padStart(2, '0')
                 val dd = match.groupValues[2].padStart(2, '0')
-                val yyyy = match.groupValues[3]
-                return "$dd/$mm/$yyyy"
+                val yyyy = match.groupValues[3].toInt()
+                // Garante que o ano seja o atual (2026) se vier desatualizado
+                val finalYear = if (yyyy < 2026) currentYear else yyyy
+                return "$dd/$mm/$finalYear"
             }
             
-            // Caso venha formato textual como "Apr 7, 2024" ou similar
             val today = LocalDate.now()
             today.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
         } catch (_: Exception) {
-            val today = LocalDate.now()
-            today.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+            "01/01/$currentYear"
         }
     }
 }
