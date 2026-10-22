@@ -1,7 +1,6 @@
 package agenda.de.myapplicationanim1.data.model
 
 import java.util.Calendar
-import java.util.Locale
 
 data class Anime(
     val id: Int,
