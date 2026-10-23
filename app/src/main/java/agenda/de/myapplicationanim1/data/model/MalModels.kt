@@ -91,7 +91,7 @@ fun MalAnimeNode.toDomain(): Anime {
         synopsis = synopsis ?: "No synopsis available.",
         score = mean ?: 0.0,
         episodes = numEpisodes ?: 0,
-        status = status ?: "Currently Airing",
+        status = "Currently Airing",
         aired = startDate ?: "",
         broadcast = BroadcastInfo(
             day = dayOfWeek,
@@ -110,23 +110,6 @@ fun MalAnimeNode.toDomain(): Anime {
         trailerSite = null,
         externalLinks = emptyList()
     )
-}
-
-fun MalAnimeSingleResponse.toDomain(): Anime {
-    val node = MalAnimeNode(
-        id = id ?: 0,
-        title = title ?: "",
-        mainPicture = mainPicture,
-        alternativeTitles = alternativeTitles,
-        startDate = startDate,
-        synopsis = synopsis,
-        mean = mean,
-        status = status,
-        numEpisodes = numEpisodes,
-        broadcast = broadcast,
-        rating = rating
-    )
-    return node.toDomain()
 }
 
 fun mapMalDayToPortuguese(dayStr: String?): String {

@@ -5,6 +5,7 @@ import agenda.de.myapplicationanim1.data.model.Anime
 import agenda.de.myapplicationanim1.data.model.isMatureContent
 import agenda.de.myapplicationanim1.data.model.toDomain
 import agenda.de.myapplicationanim1.data.remote.BangumiApiService
+import agenda.de.myapplicationanim1.data.remote.RetrofitClient
 import agenda.de.myapplicationanim1.data.util.Resource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -12,7 +13,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 
 class AnimeRepositoryImpl(
-    private val bangumiApiService: BangumiApiService = BangumiApiService.create(),
+    private val bangumiApiService: BangumiApiService = RetrofitClient.bangumiApiService
 ) : AnimeRepository {
 
     private val allowedPlatforms = listOf(
@@ -26,7 +27,8 @@ class AnimeRepositoryImpl(
         "Hulu",
         "Paramount+",
         "Apple TV+",
-        "Bilibili"
+        "Bilibili",
+        "YouTube"
     )
 
     private fun safeLogE(tag: String, msg: String, tr: Throwable? = null) {
@@ -44,10 +46,11 @@ class AnimeRepositoryImpl(
             if (response.isSuccessful) {
                 val dataResponse = response.body()
                 val items = dataResponse?.items ?: emptyList()
-                val nonMatureItems = items.filter { !it.isMatureContent() }
-                var animeList = nonMatureItems.map { it.toDomain() }
+                var animeList = items
+                    .filter { !it.isMatureContent() }
+                    .map { it.toDomain() }
 
-                // Filter by streaming platforms popular in BR/USA if external links are present
+                // Filter by popular streaming platforms in BR/USA if sites are present
                 animeList = animeList.filter { anime ->
                     if (anime.externalLinks.isEmpty()) {
                         true
@@ -69,7 +72,7 @@ class AnimeRepositoryImpl(
                 emit(Resource.Error("Erro ao carregar programação: HTTP ${response.code()}"))
             }
         } catch (e: Exception) {
-            safeLogE("AnimeRepository", "Erro ao carregar programação do Bangumi: ${e.message}", e)
+            safeLogE("AnimeRepository", "Erro Bangumi: ${e.message}", e)
             emit(Resource.Error("Erro ao carregar programação: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
@@ -79,15 +82,18 @@ class AnimeRepositoryImpl(
         try {
             val response = bangumiApiService.getItems()
             if (response.isSuccessful) {
-                val items = response.body()?.items ?: emptyList()
-                val nonMatureItems = items.filter { !it.isMatureContent() }
-                val animeList = nonMatureItems.map { it.toDomain() }.take(50)
+                val dataResponse = response.body()
+                val items = dataResponse?.items ?: emptyList()
+                val animeList = items
+                    .filter { !it.isMatureContent() }
+                    .map { it.toDomain() }
+                    .take(24)
                 emit(Resource.Success(animeList))
             } else {
-                emit(Resource.Error("Erro ao carregar animes populares: HTTP ${response.code()}"))
+                emit(Resource.Error("Erro ao carregar populares"))
             }
         } catch (e: Exception) {
-            safeLogE("AnimeRepository", "Erro popular do Bangumi: ${e.message}", e)
+            safeLogE("AnimeRepository", "Erro populares Bangumi: ${e.message}", e)
             emit(Resource.Error("Erro ao carregar populares: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
@@ -97,25 +103,23 @@ class AnimeRepositoryImpl(
         try {
             val response = bangumiApiService.getItems()
             if (response.isSuccessful) {
-                val items = response.body()?.items ?: emptyList()
-                val nonMatureItems = items.filter { !it.isMatureContent() }
-                var animeList = nonMatureItems.map { it.toDomain() }
-
-                if (query.isNotBlank()) {
-                    val q = query.trim().lowercase()
-                    animeList = animeList.filter { 
-                        it.title.lowercase().contains(q) || 
-                        it.titleEnglish.lowercase().contains(q) ||
-                        it.titleRomaji.lowercase().contains(q)
+                val dataResponse = response.body()
+                val items = dataResponse?.items ?: emptyList()
+                val normalizedQuery = query.trim().lowercase()
+                val animeList = items
+                    .filter { !it.isMatureContent() }
+                    .map { it.toDomain() }
+                    .filter {
+                        it.title.lowercase().contains(normalizedQuery) ||
+                                it.titleEnglish.lowercase().contains(normalizedQuery) ||
+                                it.titleRomaji.lowercase().contains(normalizedQuery)
                     }
-                }
-
                 emit(Resource.Success(animeList))
             } else {
                 emit(Resource.Error("Erro na busca"))
             }
         } catch (e: Exception) {
-            safeLogE("AnimeRepository", "Erro na busca do Bangumi: ${e.message}", e)
+            safeLogE("AnimeRepository", "Erro na busca Bangumi: ${e.message}", e)
             emit(Resource.Error("Erro na busca: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
@@ -125,18 +129,19 @@ class AnimeRepositoryImpl(
         try {
             val response = bangumiApiService.getItems()
             if (response.isSuccessful) {
-                val items = response.body()?.items ?: emptyList()
-                val item = items.firstOrNull { (it.id?.hashCode() ?: it.title?.hashCode()) == id }
+                val dataResponse = response.body()
+                val items = dataResponse?.items ?: emptyList()
+                val item = items.firstOrNull { it.id?.hashCode() == id || it.toDomain().id == id }
                 if (item != null) {
                     emit(Resource.Success(item.toDomain()))
                 } else {
-                    emit(Resource.Error("Anime não encontrado"))
+                    emit(Resource.Error("Detalhes do anime não encontrados"))
                 }
             } else {
                 emit(Resource.Error("Erro ao carregar detalhes"))
             }
         } catch (e: Exception) {
-            safeLogE("AnimeRepository", "Erro nos detalhes do Bangumi: ${e.message}", e)
+            safeLogE("AnimeRepository", "Erro nos detalhes Bangumi: ${e.message}", e)
             emit(Resource.Error("Erro ao carregar detalhes: ${e.localizedMessage ?: e.message}", e))
         }
     }.flowOn(Dispatchers.IO)
