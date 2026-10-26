@@ -105,7 +105,7 @@ fun FavoritesScreen(
                             fontFamily = ChewyFontFamily,
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFA855F7)
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 },

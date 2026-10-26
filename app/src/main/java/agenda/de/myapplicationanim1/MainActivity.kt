@@ -9,11 +9,8 @@ import androidx.activity.enableEdgeToEdge
 import agenda.de.myapplicationanim1.data.util.CacheCleanupWorker
 import agenda.de.myapplicationanim1.ui.MainApp
 import agenda.de.myapplicationanim1.ui.theme.AgendaDeAnimesTheme
-import com.google.firebase.Firebase
 import com.google.firebase.FirebaseApp
 import com.google.firebase.FirebaseOptions
-import com.google.firebase.appdistribution.InterruptionLevel
-import com.google.firebase.appdistribution.appDistribution
 
 class MainActivity : ComponentActivity() {
 
@@ -43,14 +40,7 @@ class MainActivity : ComponentActivity() {
             Log.d("FirebaseInit", "Manual Firebase initialization info: ${e.message}")
         }
 
-        try {
-            Firebase.appDistribution.showFeedbackNotification(
-                R.string.additionalFormText,
-                InterruptionLevel.HIGH
-            )
-        } catch (e: Exception) {
-            Log.d("FirebaseAppDist", "Feedback notification: ${e.message}")
-        }
+
 
         val animeIdFromIntent = getAnimeIdFromIntent(intent)
         setContent {
