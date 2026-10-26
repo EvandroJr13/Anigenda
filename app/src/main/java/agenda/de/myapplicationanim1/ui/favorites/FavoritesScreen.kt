@@ -65,6 +65,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import agenda.de.myapplicationanim1.R
 import agenda.de.myapplicationanim1.data.util.FavoriteAnime
 import agenda.de.myapplicationanim1.data.util.FavoriteEpisode
+import agenda.de.myapplicationanim1.ui.components.GlobalNotificationAction
 import agenda.de.myapplicationanim1.ui.theme.ChewyFontFamily
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
@@ -90,31 +91,26 @@ fun FavoritesScreen(
             TopAppBar(
                 title = {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.app_logo),
-                                contentDescription = "AG Logo",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
                         Text(
-                            text = "Favoritos / Amados",
+                            text = "Ani",
                             fontFamily = ChewyFontFamily,
-                            fontSize = 28.sp,
+                            fontSize = 32.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
+                            color = Color.White
+                        )
+                        Text(
+                            text = "genda",
+                            fontFamily = ChewyFontFamily,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFA855F7)
                         )
                     }
+                },
+                actions = {
+                    GlobalNotificationAction()
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,

@@ -10,22 +10,22 @@ import agenda.de.myapplicationanim1.data.util.SystemThemeMode
 import agenda.de.myapplicationanim1.ui.settings.AppThemeMode
 
 private val BlackNeonBlueColorScheme = darkColorScheme(
-    primary = Color(0xFF00A8FF),
+    primary = Color(0xFFA855F7),
     onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFF003B6F),
-    onPrimaryContainer = Color(0xFFD0E8FF),
-    secondary = Color(0xFF00A8FF),
+    primaryContainer = Color(0xFF3B0764),
+    onPrimaryContainer = Color(0xFFE9D5FF),
+    secondary = Color(0xFFC084FC),
     onSecondary = Color(0xFFFFFFFF),
-    tertiary = Color(0xFF38BDF8),
+    tertiary = Color(0xFFEAB308),
     background = Color(0xFF0B0E14),
     onBackground = Color(0xFFFFFFFF),
-    surface = Color(0xFF121824),
+    surface = Color(0xFF131722),
     onSurface = Color(0xFFFFFFFF),
-    surfaceVariant = Color(0xFF1A2332),
-    onSurfaceVariant = Color(0xFF8A99AD),
-    surfaceContainer = Color(0xFF121824),
-    surfaceContainerHigh = Color(0xFF1A2332),
-    surfaceContainerHighest = Color(0xFF222D40),
+    surfaceVariant = Color(0xFF1A202C),
+    onSurfaceVariant = Color(0xFF94A3B8),
+    surfaceContainer = Color(0xFF131722),
+    surfaceContainerHigh = Color(0xFF1A202C),
+    surfaceContainerHighest = Color(0xFF242C3D),
     outline = Color(0xFF334155),
     outlineVariant = Color(0xFF1E293B)
 )

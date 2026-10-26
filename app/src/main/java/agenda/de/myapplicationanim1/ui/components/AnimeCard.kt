@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Favorite
@@ -76,20 +77,20 @@ fun AnimeCard(
     ElevatedCard(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(18.dp))
             .clickable { onClick(anime) },
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(18.dp),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 6.dp),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     ) {
         Column {
-            // Image Container with Overlays
+            // Poster Image Container with Reference UI Overlay Badges
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(0.72f)
+                    .aspectRatio(0.75f)
             ) {
                 SubcomposeAsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -130,11 +131,13 @@ fun AnimeCard(
                     }
                 )
 
-                // Per-Anime Notification Toggle Button (Top-Left)
+                // Top-Left: Translucent Dark Circle Badge for Notification Bell
                 Surface(
-                    shape = RoundedCornerShape(bottomEnd = 12.dp, topStart = 16.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
-                    modifier = Modifier.align(Alignment.TopStart)
+                    shape = CircleShape,
+                    color = Color.Black.copy(alpha = 0.55f),
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .align(Alignment.TopStart)
                 ) {
                     IconButton(
                         onClick = {
@@ -151,18 +154,18 @@ fun AnimeCard(
                                 AnimeAlarmScheduler.cancelAlarm(context, anime.id)
                             }
                         },
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(34.dp)
                     ) {
                         Icon(
                             imageVector = if (isNotifEnabled) Icons.Rounded.Notifications else Icons.Rounded.NotificationsOff,
                             contentDescription = "Notificações do Anime",
-                            tint = if (isNotifEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = if (isNotifEnabled) Color(0xFFA855F7) else Color.White.copy(alpha = 0.9f),
                             modifier = Modifier.size(18.dp)
                         )
                     }
                 }
 
-                // Rating Score & Favorite Heart Badge (Top-Right)
+                // Top-Right: Translucent Dark Pill Badge for Heart (Favorite) & Yellow Star Rating
                 val scoreText = if (anime.score > 0.0) {
                     String.format(Locale.US, "%.1f", anime.score)
                 } else {
@@ -170,65 +173,71 @@ fun AnimeCard(
                 }
 
                 Surface(
-                    shape = RoundedCornerShape(bottomStart = 12.dp, topEnd = 16.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
-                    modifier = Modifier.align(Alignment.TopEnd)
+                    shape = CircleShape,
+                    color = Color.Black.copy(alpha = 0.55f),
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .align(Alignment.TopEnd)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        IconButton(
-                            onClick = {
-                                isFavorite = favPrefs.toggleAnimeFavorite(anime)
-                            },
-                            modifier = Modifier.size(28.dp)
+                        // Heart Icon
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .clickable { isFavorite = favPrefs.toggleAnimeFavorite(anime) }
+                                .padding(2.dp)
                         ) {
                             Icon(
                                 imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                                contentDescription = "Amei este anime",
-                                tint = if (isFavorite) Color(0xFFFF4081) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                contentDescription = "Favoritar",
+                                tint = if (isFavorite) Color(0xFFEF4444) else Color.White.copy(alpha = 0.9f),
                                 modifier = Modifier.size(16.dp)
                             )
                         }
+
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        // Star Rating
                         Icon(
                             imageVector = Icons.Rounded.Star,
                             contentDescription = "Rating",
-                            tint = Color(0xFFFFB800),
-                            modifier = Modifier.size(14.dp)
+                            tint = Color(0xFFEAB308), // Gold Star
+                            modifier = Modifier.size(15.dp)
                         )
                         Spacer(modifier = Modifier.width(3.dp))
                         Text(
                             text = scoreText,
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = Color.White
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
                     }
                 }
 
-                // Episode Badge e.g. "EP 10 • Hoje" (Bottom-Left)
+                // Episode / Day Badge (Bottom-Left)
                 val epNum = anime.nextAiringEpisode?.episode ?: if (anime.episodes > 0) anime.episodes else 1
                 val dayLabel = if (selectedDayName.equals("Hoje", ignoreCase = true)) "Hoje" else selectedDayName
                 val episodeBadgeText = "EP $epNum • $dayLabel"
 
                 Surface(
-                    shape = RoundedCornerShape(topStart = 12.dp, bottomEnd = 12.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.92f),
+                    shape = RoundedCornerShape(topEnd = 12.dp, bottomStart = 18.dp),
+                    color = Color(0xFFA855F7).copy(alpha = 0.90f),
                     modifier = Modifier.align(Alignment.BottomStart)
                 ) {
                     Text(
                         text = episodeBadgeText,
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        color = Color.White,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
             }
 
-            // Info Content Section
+            // Info Content Section Below Image
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -239,42 +248,19 @@ fun AnimeCard(
                     text = anime.title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     lineHeight = 18.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // Studio Info
-                val studioName = anime.studios.firstOrNull() ?: "Desconhecido"
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Tv,
-                        contentDescription = "Estúdio",
-                        modifier = Modifier.size(12.dp),
-                        tint = MaterialTheme.colorScheme.secondary
-                    )
-                    Text(
-                        text = studioName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.secondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Broadcast Info Tag
+                // Studio or Broadcast Info Tag
                 val broadcastTag = when {
-                    anime.broadcast.time.isNotEmpty() -> "${anime.broadcast.day.ifEmpty { "Transmissão" }} às ${anime.broadcast.time}"
+                    anime.broadcast.time.isNotEmpty() -> "${anime.broadcast.day.ifEmpty { "Exibição" }} às ${anime.broadcast.time}"
                     anime.broadcast.stringFormat.isNotEmpty() -> anime.broadcast.stringFormat
-                    else -> "Horário N/I"
+                    else -> anime.studios.firstOrNull() ?: "Programado"
                 }
 
                 Row(
@@ -285,44 +271,15 @@ fun AnimeCard(
                         imageVector = Icons.Rounded.Schedule,
                         contentDescription = "Horário de exibição",
                         modifier = Modifier.size(12.dp),
-                        tint = MaterialTheme.colorScheme.tertiary
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
                         text = broadcastTag,
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.tertiary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                }
-
-                // Streaming Badge (Crunchyroll, Netflix, HBO, Prime Video, Disney+)
-                val streamingPlatform = anime.externalLinks.firstOrNull { link ->
-                    val site = link.site.lowercase()
-                    site.contains("crunchyroll") ||
-                    site.contains("netflix") ||
-                    site.contains("hbo") ||
-                    site.contains("max") ||
-                    site.contains("prime") ||
-                    site.contains("amazon") ||
-                    site.contains("disney") ||
-                    site.contains("hulu")
-                }
-                if (streamingPlatform != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = MaterialTheme.colorScheme.tertiaryContainer,
-                        modifier = Modifier.padding(top = 2.dp)
-                    ) {
-                        Text(
-                            text = streamingPlatform.site,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
                 }
             }
         }

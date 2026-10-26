@@ -9,7 +9,7 @@ import agenda.de.myapplicationanim1.ui.search.SearchViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -19,41 +19,43 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModelTest {
 
-    @get:Rule
-    val mainDispatcherRule = MainDispatcherRule()
+    private val testDispatcher = StandardTestDispatcher()
 
-    private val fakeSearchResult = listOf(
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule(testDispatcher)
+
+    private val fakeAnimeList = listOf(
         Anime(
             id = 1,
-            title = "Naruto Shippuden",
+            title = "Naruto",
             titleJapanese = "ナルト",
             imageUrl = "http://example.com/naruto.jpg",
             largeImageUrl = "http://example.com/naruto_large.jpg",
-            synopsis = "Ninja adventures",
-            score = 8.2,
-            episodes = 500,
+            synopsis = "Ninja anime",
+            score = 8.0,
+            episodes = 220,
             status = "Finished Airing",
-            aired = "2007",
-            broadcast = BroadcastInfo("Thursdays", "19:30", "JST", "Thursdays at 19:30"),
+            aired = "2002",
+            broadcast = BroadcastInfo("Thursdays", "19:00", "JST", "Thursdays at 19:00"),
             genres = listOf("Action", "Adventure"),
-            studios = listOf("Pierrot"),
-            season = "Winter",
-            year = 2007,
+            studios = listOf("Studio Pierrot"),
+            season = "Fall",
+            year = 2002,
             rating = "PG-13"
         ),
         Anime(
             id = 2,
             title = "One Piece",
             titleJapanese = "ワンピース",
-            imageUrl = "http://example.com/onepiece.jpg",
-            largeImageUrl = "http://example.com/onepiece_large.jpg",
-            synopsis = "Pirate adventures",
-            score = 8.7,
+            imageUrl = "http://example.com/op.jpg",
+            largeImageUrl = "http://example.com/op_large.jpg",
+            synopsis = "Pirate anime",
+            score = 9.0,
             episodes = 1000,
             status = "Currently Airing",
             aired = "1999",
             broadcast = BroadcastInfo("Sundays", "09:30", "JST", "Sundays at 09:30"),
-            genres = listOf("Action", "Adventure", "Comedy"),
+            genres = listOf("Action", "Adventure"),
             studios = listOf("Toei Animation"),
             season = "Fall",
             year = 1999,
@@ -61,73 +63,91 @@ class SearchViewModelTest {
         )
     )
 
-    private inner class FakeSearchRepository : AnimeRepository {
+    private class FakeSearchRepository(
+        var searchResult: Resource<List<Anime>> = Resource.Success(emptyList())
+    ) : AnimeRepository {
         var requestedQuery: String? = null
-        var shouldReturnError = false
+        var requestedGenre: String? = null
+        var searchCallCount = 0
 
         override fun getSchedules(filter: String?): Flow<Resource<List<Anime>>> = flowOf(Resource.Success(emptyList()))
         override fun getPopularAnime(): Flow<Resource<List<Anime>>> = flowOf(Resource.Success(emptyList()))
-        override fun getAnimeDetails(id: Int): Flow<Resource<Anime>> = flowOf(Resource.Error("Not implemented"))
 
         override fun searchAnime(query: String, genre: String?): Flow<Resource<List<Anime>>> {
             requestedQuery = query
-            return if (shouldReturnError) {
-                flowOf(Resource.Error("Search failed"))
-            } else {
-                flowOf(Resource.Success(fakeSearchResult))
-            }
+            requestedGenre = genre
+            searchCallCount++
+            return flowOf(searchResult)
         }
+
+        override fun getAnimeDetails(id: Int): Flow<Resource<Anime>> = flowOf(Resource.Error("Not implemented"))
     }
 
     @Test
-    fun initialScreenState_isIdle() {
-        val repo = FakeSearchRepository()
-        val viewModel = SearchViewModel(repository = repo)
-
-        assertTrue(viewModel.uiState.value is SearchUiState.Idle)
+    fun initial_stateIsIdle() = runTest(testDispatcher) {
+        val viewModel = SearchViewModel(repository = FakeSearchRepository())
+        assertEquals("", viewModel.query.value)
+        assertEquals(SearchUiState.Idle, viewModel.uiState.value)
     }
 
     @Test
-    fun onQueryChanged_triggersDebouncedSearch() = runTest {
-        val repo = FakeSearchRepository()
+    fun onQueryChanged_triggersDebouncedSearch() = runTest(testDispatcher) {
+        val repo = FakeSearchRepository(searchResult = Resource.Success(fakeAnimeList))
         val viewModel = SearchViewModel(repository = repo)
 
         viewModel.onQueryChanged("Naruto")
-        advanceTimeBy(500) // Advance past debounce delay
+        // Advance time past the 400ms debounce delay
+        testDispatcher.scheduler.advanceTimeBy(450)
 
-        assertEquals("Naruto", repo.requestedQuery)
+        assertEquals("Naruto", viewModel.query.value)
         val state = viewModel.uiState.value
         assertTrue(state is SearchUiState.Success)
-        assertEquals(fakeSearchResult, (state as SearchUiState.Success).animeList)
+        assertEquals(fakeAnimeList, (state as SearchUiState.Success).animeList)
+        assertEquals("Naruto", repo.requestedQuery)
     }
 
     @Test
-    fun clearQuery_resetsToIdleWhenNoFilterSelected() = runTest {
-        val repo = FakeSearchRepository()
+    fun searchError_emitsErrorState() = runTest(testDispatcher) {
+        val repo = FakeSearchRepository(searchResult = Resource.Error("Search failed"))
         val viewModel = SearchViewModel(repository = repo)
 
         viewModel.onQueryChanged("Naruto")
-        advanceTimeBy(500)
+        testDispatcher.scheduler.advanceTimeBy(450)
 
-        viewModel.clearQuery()
-        assertTrue(viewModel.uiState.value is SearchUiState.Idle)
-        assertEquals("", viewModel.query.value)
+        val state = viewModel.uiState.value
+        assertTrue(state is SearchUiState.Error)
+        assertEquals("Search failed", (state as SearchUiState.Error).message)
     }
 
     @Test
-    fun toggleStatus_filtersResults() = runTest {
-        val repo = FakeSearchRepository()
+    fun toggleStatus_filtersResults() = runTest(testDispatcher) {
+        val repo = FakeSearchRepository(searchResult = Resource.Success(fakeAnimeList))
         val viewModel = SearchViewModel(repository = repo)
 
         viewModel.onQueryChanged("Anime")
-        advanceTimeBy(500)
+        testDispatcher.scheduler.advanceTimeBy(450)
 
-        viewModel.toggleStatus("Finished")
+        // Filter by Airing (One Piece has "Currently Airing", Naruto has "Finished Airing")
+        viewModel.toggleStatus("Airing")
 
         val state = viewModel.uiState.value
         assertTrue(state is SearchUiState.Success)
-        val filteredList = (state as SearchUiState.Success).animeList
-        assertEquals(1, filteredList.size)
-        assertEquals("Naruto Shippuden", filteredList.first().title)
+        val list = (state as SearchUiState.Success).animeList
+        assertEquals(1, list.size)
+        assertEquals("One Piece", list[0].title)
+    }
+
+    @Test
+    fun clearQuery_resetsStateWhenNoFiltersActive() = runTest(testDispatcher) {
+        val repo = FakeSearchRepository(searchResult = Resource.Success(fakeAnimeList))
+        val viewModel = SearchViewModel(repository = repo)
+
+        viewModel.onQueryChanged("Naruto")
+        testDispatcher.scheduler.advanceTimeBy(450)
+
+        viewModel.clearQuery()
+
+        assertEquals("", viewModel.query.value)
+        assertEquals(SearchUiState.Idle, viewModel.uiState.value)
     }
 }

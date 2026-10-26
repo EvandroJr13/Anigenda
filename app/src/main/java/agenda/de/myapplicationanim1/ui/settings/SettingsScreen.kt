@@ -33,10 +33,6 @@ import androidx.compose.material3.Card
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.material.icons.rounded.Feedback
 import agenda.de.myapplicationanim1.data.util.BackupManager
-import com.google.firebase.Firebase
-import com.google.firebase.appdistribution.appDistribution
-import com.google.android.gms.tasks.OnFailureListener
-import com.google.android.gms.tasks.OnSuccessListener
 import agenda.de.myapplicationanim1.update.UpdateCheckResult
 import androidx.compose.material.icons.rounded.Storage
 import android.content.Context
@@ -68,6 +64,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import agenda.de.myapplicationanim1.ui.components.GlobalNotificationAction
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -107,38 +105,32 @@ fun SettingsScreen(
     var customHexInput by remember(viewModel?.backgroundColorHex) {
         mutableStateOf(viewModel?.backgroundColorHex ?: "#0B0E14")
     }
-    var showNativeFeedbackDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.app_logo),
-                                contentDescription = "AG Logo",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
                         Text(
-                            text = "Configurações",
+                            text = "Ani",
                             fontFamily = ChewyFontFamily,
-                            fontSize = 28.sp,
+                            fontSize = 32.sp,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
+                            color = Color.White
+                        )
+                        Text(
+                            text = "genda",
+                            fontFamily = ChewyFontFamily,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFA855F7)
                         )
                     }
+                },
+                actions = {
+                    GlobalNotificationAction()
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
@@ -302,15 +294,19 @@ fun SettingsScreen(
                 }
             }
 
-            // Email Feedback Button
+            // Email Feedback Button ("Enviar-feedback")
             item {
                 val context = LocalContext.current
+                var showEmailChooserDialog by remember { mutableStateOf(false) }
 
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showEmailChooserDialog = true },
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
+                    ),
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -325,38 +321,117 @@ fun SettingsScreen(
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Enviar Feedback por E-mail",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Envie sugestões ou relatos para evandro.asjunior13@gmail.com",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Enviar-feedback",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
                         Button(
-                            onClick = {
-                                try {
-                                    val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
-                                        data = android.net.Uri.parse("mailto:evandro.asjunior13@gmail.com")
-                                        putExtra(android.content.Intent.EXTRA_SUBJECT, "Feedback Anime Schedule")
-                                        putExtra(android.content.Intent.EXTRA_TEXT, "Olá Evandro,\n\nFeedback sobre o app Anime Schedule:\n")
-                                    }
-                                    context.startActivity(android.content.Intent.createChooser(intent, "Enviar E-mail"))
-                                } catch (_: Exception) {
-                                    showNativeFeedbackDialog = true
-                                }
-                            }
+                            onClick = { showEmailChooserDialog = true },
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("Enviar E-mail")
+                            Text("Enviar")
                         }
                     }
+                }
+
+                if (showEmailChooserDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showEmailChooserDialog = false },
+                        title = { Text("Escolher onde abrir") },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text(
+                                    text = "Escolha onde deseja abrir o e-mail para evandro.asjunior13@gmail.com:",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                // 1. Navegador
+                                OutlinedButton(
+                                    onClick = {
+                                        showEmailChooserDialog = false
+                                        try {
+                                            val url = "https://mail.google.com/mail/?view=cm&fs=1&to=evandro.asjunior13@gmail.com&su=Feedback%20Anime%20Schedule&body=Olá%20Evandro,%0A%0AFeedback%20sobre%20o%20app%20Anime%20Schedule:%0A"
+                                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                            context.startActivity(intent)
+                                        } catch (e: Exception) {
+                                            Toast.makeText(context, "Erro ao abrir navegador: ${e.message}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("🌐 Navegador")
+                                }
+
+                                // 2. App do Gmail
+                                OutlinedButton(
+                                    onClick = {
+                                        showEmailChooserDialog = false
+                                        try {
+                                            val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+                                                data = android.net.Uri.parse("mailto:evandro.asjunior13@gmail.com")
+                                                putExtra(android.content.Intent.EXTRA_SUBJECT, "Feedback Anime Schedule")
+                                                putExtra(android.content.Intent.EXTRA_TEXT, "Olá Evandro,\n\nFeedback sobre o app Anime Schedule:\n")
+                                                setPackage("com.google.android.gm")
+                                            }
+                                            context.startActivity(intent)
+                                        } catch (_: Exception) {
+                                            try {
+                                                val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+                                                    data = android.net.Uri.parse("mailto:evandro.asjunior13@gmail.com")
+                                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Feedback Anime Schedule")
+                                                    putExtra(android.content.Intent.EXTRA_TEXT, "Olá Evandro,\n\nFeedback sobre o app Anime Schedule:\n")
+                                                }
+                                                context.startActivity(android.content.Intent.createChooser(intent, "Abrir com o Gmail"))
+                                            } catch (ex: Exception) {
+                                                Toast.makeText(context, "Gmail não encontrado: ${ex.message}", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("✉️ App do Gmail")
+                                }
+
+                                // 3. Outlook
+                                OutlinedButton(
+                                    onClick = {
+                                        showEmailChooserDialog = false
+                                        try {
+                                            val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+                                                data = android.net.Uri.parse("mailto:evandro.asjunior13@gmail.com")
+                                                putExtra(android.content.Intent.EXTRA_SUBJECT, "Feedback Anime Schedule")
+                                                putExtra(android.content.Intent.EXTRA_TEXT, "Olá Evandro,\n\nFeedback sobre o app Anime Schedule:\n")
+                                                setPackage("com.microsoft.office.outlook")
+                                            }
+                                            context.startActivity(intent)
+                                        } catch (_: Exception) {
+                                            try {
+                                                val url = "https://outlook.live.com/owa/?path=/mail/action/compose&to=evandro.asjunior13@gmail.com&subject=Feedback%20Anime%20Schedule"
+                                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                                context.startActivity(intent)
+                                            } catch (ex: Exception) {
+                                                Toast.makeText(context, "Outlook não encontrado: ${ex.message}", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text("📨 Outlook")
+                                }
+                            }
+                        },
+                        confirmButton = {},
+                        dismissButton = {
+                            TextButton(onClick = { showEmailChooserDialog = false }) {
+                                Text("Cancelar")
+                            }
+                        }
+                    )
                 }
             }
 
@@ -853,65 +928,6 @@ fun SettingsScreen(
             item {
                 ApiSourceFooter(text = "Dados fornecidos por: AniList API")
             }
-        }
-
-        if (showNativeFeedbackDialog) {
-            val context = LocalContext.current
-            var feedbackInputText by remember { mutableStateOf("") }
-
-            AlertDialog(
-                onDismissRequest = { showNativeFeedbackDialog = false },
-                title = { Text("Enviar Feedback do Testador") },
-                text = {
-                    Column {
-                        Text(
-                            text = "Escreva abaixo suas sugestões, críticas ou relatos de bugs do aplicativo:",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        OutlinedTextField(
-                            value = feedbackInputText,
-                            onValueChange = { feedbackInputText = it },
-                            label = { Text("Seu feedback...") },
-                            modifier = Modifier.fillMaxWidth(),
-                            minLines = 3,
-                            maxLines = 5
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            if (feedbackInputText.isNotBlank()) {
-                                showNativeFeedbackDialog = false
-                                try {
-                                    val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
-                                        data = android.net.Uri.parse("mailto:")
-                                        putExtra(android.content.Intent.EXTRA_SUBJECT, "Feedback Anime Schedule")
-                                        putExtra(android.content.Intent.EXTRA_TEXT, feedbackInputText)
-                                    }
-                                    context.startActivity(android.content.Intent.createChooser(intent, "Enviar por E-mail"))
-                                } catch (_: Exception) {
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                    val clip = android.content.ClipData.newPlainText("Feedback", feedbackInputText)
-                                    clipboard.setPrimaryClip(clip)
-                                    Toast.makeText(context, "Feedback copiado para a área de transferência!", Toast.LENGTH_LONG).show()
-                                }
-                            } else {
-                                Toast.makeText(context, "Escreva uma mensagem antes de enviar.", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    ) {
-                        Text("Enviar por E-mail / Copiar")
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showNativeFeedbackDialog = false }) {
-                        Text("Cancelar")
-                    }
-                }
-            )
         }
     }
 }

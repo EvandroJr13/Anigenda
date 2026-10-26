@@ -128,7 +128,8 @@ class SearchViewModel(
         if (selectedStatusVal != null) {
             result = result.filter { anime ->
                 if (selectedStatusVal.equals("Airing", ignoreCase = true)) {
-                    anime.status.contains("Airing", ignoreCase = true) || anime.status.contains("RELEASING", ignoreCase = true)
+                    (anime.status.contains("Airing", ignoreCase = true) || anime.status.contains("RELEASING", ignoreCase = true)) &&
+                            !anime.status.contains("Finished", ignoreCase = true)
                 } else if (selectedStatusVal.equals("Finished", ignoreCase = true)) {
                     anime.status.contains("Finished", ignoreCase = true) || anime.status.contains("FINISHED", ignoreCase = true)
                 } else {

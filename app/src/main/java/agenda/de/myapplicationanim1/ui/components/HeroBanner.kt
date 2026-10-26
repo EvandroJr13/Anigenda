@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Favorite
@@ -71,14 +72,14 @@ fun HeroBanner(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .height(310.dp)
-            .clip(RoundedCornerShape(24.dp))
+            .height(320.dp)
+            .clip(RoundedCornerShape(28.dp))
             .clickable { onAnimeClick(anime) },
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(28.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // High Resolution Backdrop Image
+            // Backdrop Image
             SubcomposeAsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(anime.largeImageUrl.ifEmpty { anime.imageUrl })
@@ -109,220 +110,146 @@ fun HeroBanner(
                 }
             )
 
-            // Dark Gradient Overlay for optimal text readability
+            // Dark Gradient Overlay
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                Color.Black.copy(alpha = 0.25f),
-                                Color.Black.copy(alpha = 0.55f),
-                                Color.Black.copy(alpha = 0.95f)
+                                Color.Black.copy(alpha = 0.20f),
+                                Color.Black.copy(alpha = 0.50f),
+                                Color.Black.copy(alpha = 0.92f)
                             )
                         )
                     )
             )
 
-            // Top Badges Row (Featured Tag + Rating Score Badge)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // "DESTAQUE DO DIA" Badge
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primary
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Star,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "DESTAQUE DO DIA",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                }
-
-                // Rating Score Badge
-                val scoreText = if (anime.score > 0.0) {
-                    String.format(Locale.US, "%.1f", anime.score)
-                } else {
-                    "N/A"
-                }
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color.Black.copy(alpha = 0.65f)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.Star,
-                            contentDescription = "Rating",
-                            tint = Color(0xFFFFB800),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = scoreText,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                }
-            }
-
-            // Bottom Hero Information & Action Buttons
+            // Bottom Information Overlay
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(20.dp)
             ) {
-                // Genre Chips Row
-                if (anime.genres.isNotEmpty()) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(bottom = 6.dp)
-                    ) {
-                        anime.genres.take(3).forEach { genre ->
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = Color.White.copy(alpha = 0.22f)
-                            ) {
-                                Text(
-                                    text = genre,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color.White,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Large Bold Title
+                // "Trending:" Tag
                 Text(
-                    text = anime.title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 26.sp
+                    text = "Trending:",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White.copy(alpha = 0.85f)
                 )
 
-                // Airing Info Subtitle
+                // Large Title
+                Text(
+                    text = anime.title,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 32.sp,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+
+                // Subtitle / Info
                 val broadcastString = when {
                     anime.broadcast.time.isNotEmpty() -> "Exibição hoje às ${anime.broadcast.time}"
                     anime.broadcast.stringFormat.isNotEmpty() -> anime.broadcast.stringFormat
-                    else -> "Lançamento Programado"
+                    else -> "Lançamento em Alta"
                 }
                 Text(
                     text = broadcastString,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.85f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.75f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 2.dp, bottom = 12.dp)
+                    modifier = Modifier.padding(top = 4.dp, bottom = 14.dp)
                 )
 
-                // Action Buttons Row
+                // "Watch Now" White Capsule Button
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    // "VER DETALHES" Primary Red Accent Button
                     Button(
                         onClick = { onAnimeClick(anime) },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFE50914), // Accent Red
-                            contentColor = Color.White
+                            containerColor = Color.White,
+                            contentColor = Color(0xFFA855F7)
                         ),
-                        shape = RoundedCornerShape(14.dp),
-                        contentPadding = ButtonDefaults.ContentPadding,
-                        modifier = Modifier.weight(1f)
+                        shape = CircleShape,
+                        modifier = Modifier.height(46.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Rounded.PlayArrow,
                             contentDescription = null,
-                            modifier = Modifier.size(20.dp)
+                            tint = Color(0xFFA855F7),
+                            modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "VER DETALHES",
+                            text = "Assistir Agora",
                             fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.labelLarge
+                            fontSize = 15.sp,
+                            color = Color(0xFFA855F7)
                         )
                     }
 
-                    // Heart / Bookmark Icon Button
-                    FilledTonalIconButton(
-                        onClick = {
-                            isFavorite = !isFavorite
-                            prefs.setAnimeNotificationsEnabled(anime, isFavorite)
-                        },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = if (isFavorite) MaterialTheme.colorScheme.errorContainer else Color.White.copy(alpha = 0.25f),
-                            contentColor = if (isFavorite) MaterialTheme.colorScheme.error else Color.White
-                        ),
-                        modifier = Modifier.size(44.dp)
+                    // Action Icons Row
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                            contentDescription = "Favorito",
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
+                        // Heart Icon
+                        FilledTonalIconButton(
+                            onClick = {
+                                isFavorite = !isFavorite
+                                prefs.setAnimeNotificationsEnabled(anime, isFavorite)
+                            },
+                            shape = CircleShape,
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = Color.Black.copy(alpha = 0.45f),
+                                contentColor = if (isFavorite) Color(0xFFEF4444) else Color.White
+                            ),
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                contentDescription = "Favorito",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
 
-                    // Notification Bell Icon Button
-                    FilledTonalIconButton(
-                        onClick = {
-                            val nextState = !isNotifEnabled
-                            if (nextState) {
-                                permissionState.requestPermissions {
-                                    isNotifEnabled = true
-                                    prefs.setAnimeNotificationsEnabled(anime, true)
-                                    AnimeAlarmScheduler.scheduleAlarm(context, anime)
+                        // Bell Icon
+                        FilledTonalIconButton(
+                            onClick = {
+                                val nextState = !isNotifEnabled
+                                if (nextState) {
+                                    permissionState.requestPermissions {
+                                        isNotifEnabled = true
+                                        prefs.setAnimeNotificationsEnabled(anime, true)
+                                        AnimeAlarmScheduler.scheduleAlarm(context, anime)
+                                    }
+                                } else {
+                                    isNotifEnabled = false
+                                    prefs.setAnimeNotificationsEnabled(anime, false)
+                                    AnimeAlarmScheduler.cancelAlarm(context, anime.id)
                                 }
-                            } else {
-                                isNotifEnabled = false
-                                prefs.setAnimeNotificationsEnabled(anime, false)
-                                AnimeAlarmScheduler.cancelAlarm(context, anime.id)
-                            }
-                        },
-                        shape = RoundedCornerShape(14.dp),
-                        colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = if (isNotifEnabled) MaterialTheme.colorScheme.primaryContainer else Color.White.copy(alpha = 0.25f),
-                            contentColor = if (isNotifEnabled) MaterialTheme.colorScheme.primary else Color.White
-                        ),
-                        modifier = Modifier.size(44.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isNotifEnabled) Icons.Rounded.Notifications else Icons.Rounded.NotificationsOff,
-                            contentDescription = "Notificação",
-                            modifier = Modifier.size(22.dp)
-                        )
+                            },
+                            shape = CircleShape,
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = Color.Black.copy(alpha = 0.45f),
+                                contentColor = if (isNotifEnabled) Color(0xFFA855F7) else Color.White
+                            ),
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isNotifEnabled) Icons.Rounded.Notifications else Icons.Rounded.NotificationsOff,
+                                contentDescription = "Notificação",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }

@@ -17,50 +17,29 @@ import java.util.concurrent.TimeUnit
 class RateLimitRetryInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
+        var response = chain.proceed(request)
         var tryCount = 0
-        val maxRetries = 2
+        val maxRetries = 3
 
-        while (true) {
+        while (response.code == 429 && tryCount < maxRetries) {
+            tryCount++
+            response.close()
+            val waitTime = 1500L * tryCount
+            Log.w("AniListApi", "HTTP 429 Too Many Requests (Rate Limit). Retrying in ${waitTime}ms (Attempt $tryCount/$maxRetries)...")
             try {
-                val response = chain.proceed(request)
-                if (response.code == 429 && tryCount < maxRetries) {
-                    tryCount++
-                    response.close()
-                    val waitTime = 1500L * tryCount
-                    Log.w("Network", "HTTP 429 Too Many Requests. Retrying in ${waitTime}ms...")
-                    Thread.sleep(waitTime)
-                    continue
-                }
-                return response
-            } catch (e: Exception) {
-                if (tryCount < maxRetries && (e is java.net.SocketTimeoutException || e is java.io.IOException)) {
-                    tryCount++
-                    Log.w("Network", "Network Timeout/IO Error: ${e.message}. Retrying attempt $tryCount/$maxRetries...")
-                    Thread.sleep(1000L)
-                } else {
-                    throw e
-                }
+                Thread.sleep(waitTime)
+            } catch (_: InterruptedException) {
+                Thread.currentThread().interrupt()
+                break
             }
+            response = chain.proceed(request)
         }
-    }
-}
-
-class UserAgentInterceptor : Interceptor {
-    override fun intercept(chain: Interceptor.Chain): Response {
-        val originalRequest = chain.request()
-        val newRequest = originalRequest.newBuilder()
-            .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36")
-            .header("Accept", "application/json, text/plain, */*")
-            .header("Accept-Language", "en-US,en;q=0.9,pt-BR;q=0.8,pt;q=0.7")
-            .header("Content-Type", "application/json")
-            .header("Origin", "https://anilist.co")
-            .header("Referer", "https://anilist.co/")
-            .build()
-        return chain.proceed(newRequest)
+        return response
     }
 }
 
 object RetrofitClient {
+    private const val BASE_URL = "https://graphql.anilist.co/"
     private const val CDN_BASE_URL = "https://cdn.jsdelivr.net/"
 
     private var appContext: Context? = null
@@ -77,17 +56,15 @@ object RetrofitClient {
 
     private val okHttpClient: OkHttpClient by lazy {
         val loggingInterceptor = HttpLoggingInterceptor { message ->
-            Log.d("BangumiHttp", message)
+            Log.d("AniListHttp", message)
         }.apply {
-            level = HttpLoggingInterceptor.Level.BASIC
+            level = HttpLoggingInterceptor.Level.BODY
         }
         val builder = OkHttpClient.Builder()
-            .addInterceptor(UserAgentInterceptor())
             .addInterceptor(RateLimitRetryInterceptor())
             .addInterceptor(loggingInterceptor)
-            .connectTimeout(60, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .writeTimeout(60, TimeUnit.SECONDS)
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
 
         appContext?.let { ctx ->
             try {
@@ -98,6 +75,15 @@ object RetrofitClient {
         }
 
         builder.build()
+    }
+
+    val aniListApiService: AniListApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+            .create(AniListApiService::class.java)
     }
 
     val bangumiApiService: BangumiApiService by lazy {
