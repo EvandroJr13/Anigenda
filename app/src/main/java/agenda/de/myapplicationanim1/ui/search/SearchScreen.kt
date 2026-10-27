@@ -385,8 +385,11 @@ fun SearchContent(
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 items(animeList, key = { it.id }) { anime ->
+                                    val ep = anime.nextAiringEpisode?.episode ?: if (anime.episodes > 0) anime.episodes else 1
                                     AnimeCard(
                                         anime = anime,
+                                        showNotificationBell = false,
+                                        episodeBadgeText = "Ep $ep, Temporadas ${anime.totalSeasons}",
                                         onClick = onAnimeClick
                                     )
                                 }

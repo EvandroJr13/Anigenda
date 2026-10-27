@@ -27,7 +27,8 @@ data class Anime(
     val nextAiringEpisode: NextAiringEpisodeInfo? = null,
     val trailerId: String? = null,
     val trailerSite: String? = null,
-    val externalLinks: List<ExternalLinkInfo> = emptyList()
+    val externalLinks: List<ExternalLinkInfo> = emptyList(),
+    val totalSeasons: Int = 1
 )
 
 data class ExternalLinkInfo(
@@ -64,6 +65,29 @@ fun getDayOfWeekFromTimestamp(airingAt: Long?): String {
     }
 }
 
+fun parseSeasonNumber(vararg titles: String): Int {
+    var season = 1
+    for (t in titles) {
+        if (t.isBlank()) continue
+        val lower = t.lowercase()
+        val regex = Regex("(?:season|temporada|part|partie|s)\\s*(\\d+)", RegexOption.IGNORE_CASE)
+        val match = regex.find(lower)
+        if (match != null) {
+            val num = match.groupValues[1].toIntOrNull() ?: 1
+            if (num in 1..25) {
+                season = maxOf(season, num)
+            }
+        }
+        if (lower.contains("2nd") || lower.contains("second") || lower.contains("2ª")) season = maxOf(season, 2)
+        if (lower.contains("3rd") || lower.contains("third") || lower.contains("3ª")) season = maxOf(season, 3)
+        if (lower.contains("4th") || lower.contains("4ª")) season = maxOf(season, 4)
+        if (lower.contains("5th") || lower.contains("5ª")) season = maxOf(season, 5)
+        if (lower.contains("6th")) season = maxOf(season, 6)
+        if (lower.contains("7th")) season = maxOf(season, 7)
+    }
+    return season
+}
+
 fun MediaDto.toDomain(): Anime {
     return try {
         val romaji = title?.romaji ?: ""
@@ -71,6 +95,7 @@ fun MediaDto.toDomain(): Anime {
         val native = title?.native ?: ""
         val bestTitle = english.ifEmpty { romaji.ifEmpty { native.ifEmpty { "Unknown Title" } } }
         val titleJapanese = native.ifEmpty { romaji }
+        val totalSeasons = parseSeasonNumber(bestTitle, romaji, english)
 
         val imageUrl = coverImage?.extraLarge ?: coverImage?.large ?: ""
         val desc = description ?: "No synopsis available."
@@ -131,13 +156,15 @@ fun MediaDto.toDomain(): Anime {
                 if (!link.site.isNullOrBlank() && !link.url.isNullOrBlank()) {
                     ExternalLinkInfo(site = link.site, url = link.url)
                 } else null
-            } ?: emptyList()
+            } ?: emptyList(),
+            totalSeasons = totalSeasons
         )
     } catch (_: Exception) {
         Anime(
             id = id,
             title = title?.english ?: title?.romaji ?: "Unknown Title",
             imageUrl = coverImage?.large ?: "",
+            totalSeasons = 1,
             synopsis = description ?: "",
             status = status ?: "RELEASING"
         )

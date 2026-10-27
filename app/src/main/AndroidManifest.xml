@@ -8,6 +8,22 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <queries>
+        <!-- Crunchyroll -->
+        <package android:name="com.crunchyroll.crunchyroid" />
+        <!-- Netflix -->
+        <package android:name="com.netflix.mediaclient" />
+        <!-- YouTube -->
+        <package android:name="com.google.android.youtube" />
+        <!-- Bilibili -->
+        <package android:name="tv.danmaku.bili" />
+        <package android:name="com.bilibili.app.in" />
+        <!-- Prime Video -->
+        <package android:name="com.amazon.avod.thirdpartyclient" />
+        <!-- Disney+ -->
+        <package android:name="com.disney.disneyplus" />
+    </queries>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -60,6 +76,11 @@
             </intent-filter>
         </receiver>
 
+
+
+
     </application>
+
+
 
 </manifest>

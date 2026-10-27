@@ -180,7 +180,7 @@ fun ScheduleContent(
                 exit = fadeOut()
             ) {
                 Column {
-                    Spacer(modifier = Modifier.height(110.dp))
+                    Spacer(modifier = Modifier.height(140.dp))
                     ShimmerGridLoading()
                 }
             }
@@ -192,7 +192,7 @@ fun ScheduleContent(
             ) {
                 if (uiState is ScheduleUiState.Error) {
                     Column {
-                        Spacer(modifier = Modifier.height(110.dp))
+                        Spacer(modifier = Modifier.height(140.dp))
                         ErrorStateView(
                             errorMessage = uiState.message,
                             onRetry = onRetry
@@ -255,9 +255,11 @@ fun ScheduleContent(
                             // Item 3: Anime Schedule Grid Cards
                             items(animeList, key = { it.id }) { anime ->
                                 Box(modifier = Modifier.padding(horizontal = 8.dp)) {
+                                    val isNewRelease = anime.totalSeasons <= 1 && (anime.status.equals("RELEASING", ignoreCase = true) || anime.status.contains("airing", ignoreCase = true))
                                     AnimeCard(
                                         anime = anime,
                                         selectedDayName = if (selectedDay == ScheduleDay.today()) "Hoje" else selectedDay.displayNamePt,
+                                        isNewRelease = isNewRelease,
                                         onClick = onAnimeClick
                                     )
                                 }
@@ -387,7 +389,7 @@ fun FullTopHeroHeader(
     var isFavorite by remember(anime.id) { mutableStateOf(prefs.isAnimeNotificationsEnabled(anime.id)) }
 
     // Parallax & Fade Effects
-    val parallaxTranslationY = (scrollOffset * 0.35f)
+    val parallaxTranslationY = (scrollOffset * 0.42f)
     val alphaFraction = (1f - (scrollOffset / 600f)).coerceIn(0f, 1f)
 
     Box(
@@ -399,7 +401,7 @@ fun FullTopHeroHeader(
                 alpha = alphaFraction
             }
             .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .background(Color.Black)
             .clickable { onAnimeClick(anime) }
     ) {
         // 1. Featured Backdrop Image covering all the way to the top
@@ -407,6 +409,8 @@ fun FullTopHeroHeader(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(anime.largeImageUrl.ifEmpty { anime.imageUrl })
                 .crossfade(true)
+                .allowHardware(true)
+                .precision(coil.size.Precision.EXACT)
                 .build(),
             contentDescription = anime.title,
             contentScale = ContentScale.Crop,
@@ -415,7 +419,7 @@ fun FullTopHeroHeader(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                        .background(Color.Black),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(
@@ -428,8 +432,8 @@ fun FullTopHeroHeader(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                    )
+                        .background(Color.Black)
+                )
             }
         )
 
@@ -440,10 +444,10 @@ fun FullTopHeroHeader(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color.Black.copy(alpha = 0.55f),
-                            Color.Black.copy(alpha = 0.25f),
-                            Color.Black.copy(alpha = 0.65f),
-                            Color.Black.copy(alpha = 0.95f)
+                            Color.Black.copy(alpha = 0.40f),
+                            Color.Black.copy(alpha = 0.15f),
+                            Color.Black.copy(alpha = 0.40f),
+                            Color.Black.copy(alpha = 0.65f)
                         )
                     )
                 )
@@ -457,7 +461,7 @@ fun FullTopHeroHeader(
                 .padding(start = 20.dp, end = 20.dp, bottom = 20.dp)
         ) {
             Text(
-                text = "Trending:",
+                text = "Destaque:",
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Medium,
                 color = Color.White.copy(alpha = 0.85f)
@@ -510,7 +514,7 @@ fun FullTopHeroHeader(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Assistir Agora",
+                        text = "Detalhes",
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                         color = Color(0xFFA855F7)

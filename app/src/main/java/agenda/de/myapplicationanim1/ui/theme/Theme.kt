@@ -81,6 +81,46 @@ private val DarkPurpleColorScheme = darkColorScheme(
     surfaceContainerHigh = Color(0xFF2A1A5E)
 )
 
+private val DarkRedColorScheme = darkColorScheme(
+    primary = Color(0xFFEF4444),
+    secondary = Color(0xFFF87171),
+    tertiary = Color(0xFFFBBF24),
+    background = Color(0xFF1A0A0A),
+    surface = Color(0xFF261010),
+    surfaceContainer = Color(0xFF261010),
+    surfaceContainerHigh = Color(0xFF3B1616)
+)
+
+private val GreenBlackColorScheme = darkColorScheme(
+    primary = Color(0xFF22C55E),
+    secondary = Color(0xFF4ADE80),
+    tertiary = Color(0xFFFACC15),
+    background = Color(0xFF000000),
+    surface = Color(0xFF0B1910),
+    surfaceContainer = Color(0xFF0B1910),
+    surfaceContainerHigh = Color(0xFF142B1A)
+)
+
+private val OrangeBlackColorScheme = darkColorScheme(
+    primary = Color(0xFFF97316),
+    secondary = Color(0xFFFB923C),
+    tertiary = Color(0xFFFACC15),
+    background = Color(0xFF000000),
+    surface = Color(0xFF1C1004),
+    surfaceContainer = Color(0xFF1C1004),
+    surfaceContainerHigh = Color(0xFF2C1906)
+)
+
+private val PinkBlackColorScheme = darkColorScheme(
+    primary = Color(0xFFEC4899),
+    secondary = Color(0xFFF472B6),
+    tertiary = Color(0xFFFACC15),
+    background = Color(0xFF000000),
+    surface = Color(0xFF1E0A16),
+    surfaceContainer = Color(0xFF1E0A16),
+    surfaceContainerHigh = Color(0xFF2E1023)
+)
+
 private val LightColorScheme = lightColorScheme(
     primary = Color(0xFF0061A4),
     onPrimary = Color(0xFFFFFFFF),
@@ -147,6 +187,10 @@ fun MyApplicationAnim1Theme(
             AppThemeMode.DARK_BLUE -> DarkBlueColorScheme
             AppThemeMode.DARK_GRAY -> DarkGrayColorScheme
             AppThemeMode.DARK_PURPLE -> DarkPurpleColorScheme
+            AppThemeMode.DARK_RED -> DarkRedColorScheme
+            AppThemeMode.GREEN_BLACK -> GreenBlackColorScheme
+            AppThemeMode.ORANGE_BLACK -> OrangeBlackColorScheme
+            AppThemeMode.PINK_BLACK -> PinkBlackColorScheme
             AppThemeMode.DARK -> DarkGrayColorScheme
             else -> BlackNeonBlueColorScheme
         }

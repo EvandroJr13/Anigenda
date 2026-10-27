@@ -26,7 +26,11 @@ enum class AppThemeMode(val title: String, val defaultBgHex: String) {
     PURE_BLACK("Preto OLED", "#000000"),
     DARK_BLUE("Azul Escuro", "#0A1128"),
     DARK_GRAY("Cinza Escuro", "#121212"),
-    DARK_PURPLE("Roxo Escuro", "#120A2A")
+    DARK_PURPLE("Roxo Escuro", "#120A2A"),
+    DARK_RED("Vermelho Escuro", "#1A0A0A"),
+    GREEN_BLACK("Verde com Preto", "#000000"),
+    ORANGE_BLACK("Laranja com Preto", "#000000"),
+    PINK_BLACK("Rosa com Preto", "#000000")
 }
 
 class SettingsViewModel @JvmOverloads constructor(

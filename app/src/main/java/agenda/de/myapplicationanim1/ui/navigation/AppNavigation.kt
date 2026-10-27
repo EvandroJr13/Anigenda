@@ -16,7 +16,7 @@ enum class BottomNavItem(
     POPULAR("Populares", Icons.Rounded.AutoAwesome),
     SEARCH("Explorar", Icons.Rounded.Search),
     FAVORITES("Favoritos", Icons.Rounded.Favorite),
-    SETTINGS("Configurações", Icons.Rounded.Settings),
+    SETTINGS("Ajustes", Icons.Rounded.Settings),
 }
 
 sealed interface AppScreen {
