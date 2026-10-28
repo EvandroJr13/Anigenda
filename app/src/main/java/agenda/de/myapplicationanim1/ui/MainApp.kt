@@ -142,13 +142,13 @@ fun MainApp(
                                             shape = RoundedCornerShape(18.dp),
                                             color = MaterialTheme.colorScheme.surfaceContainerHigh,
                                             border = BorderStroke(2.dp, primaryColor),
-                                            shadowElevation = 8.dp,
+                                            shadowElevation = 14.dp,
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .height(68.dp)
                                                 .padding(horizontal = 2.dp)
                                                 .graphicsLayer {
-                                                    translationY = -16f
+                                                    translationY = -18f
                                                 }
                                                 .clickable {
                                                     val targetScreen = when (item) {
