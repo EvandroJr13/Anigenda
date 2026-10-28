@@ -65,6 +65,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.TextStyle
 import agenda.de.myapplicationanim1.ui.components.GlobalNotificationAction
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -110,22 +113,29 @@ fun SettingsScreen(
         topBar = {
             TopAppBar(
                 title = {
+                    val blackShadow = Shadow(color = Color.Black, offset = Offset(0f, 0f), blurRadius = 6f)
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = "Ani",
-                            fontFamily = ChewyFontFamily,
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            style = TextStyle(
+                                fontFamily = ChewyFontFamily,
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                shadow = blackShadow
+                            )
                         )
                         Text(
                             text = "genda",
-                            fontFamily = ChewyFontFamily,
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            style = TextStyle(
+                                fontFamily = ChewyFontFamily,
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                shadow = blackShadow
+                            )
                         )
                     }
                 },
@@ -248,7 +258,7 @@ fun SettingsScreen(
                                 if (!isChecking) {
                                     isChecking = true
                                     scope.launch {
-                                        val manager = UpdateManager(context, "EvandroJr13", "Anime_Schedule")
+                                        val manager = UpdateManager(context, "EvandroJr13", "Anigenda")
                                         val result = manager.checkForUpdate()
                                         isChecking = false
                                         when (result) {
@@ -287,7 +297,7 @@ fun SettingsScreen(
                         onDismiss = { showUpdateDialog = false },
                         onConfirm = {
                             showUpdateDialog = false
-                            val manager = UpdateManager(context, "EvandroJr13", "Anime_Schedule")
+                            val manager = UpdateManager(context, "EvandroJr13", "Anigenda")
                             manager.downloadAndInstall(updateInfo!!.apkUrl)
                         }
                     )
