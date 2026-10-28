@@ -121,6 +121,27 @@ private val PinkBlackColorScheme = darkColorScheme(
     surfaceContainerHigh = Color(0xFF2E1023)
 )
 
+private val CyberpunkColorScheme = darkColorScheme(
+    primary = Color(0xFF00F0FF),      // Neon Cyan
+    onPrimary = Color(0xFF0D0221),
+    primaryContainer = Color(0xFF003F47),
+    onPrimaryContainer = Color(0xFFC8F8FF),
+    secondary = Color(0xFFFF007F),    // Cyberpunk Magenta/Pink
+    onSecondary = Color(0xFFFFFFFF),
+    tertiary = Color(0xFFFEE715),     // Neon Yellow
+    background = Color(0xFF0D0221),   // Cyberpunk Dark Violet/Black
+    onBackground = Color(0xFFFFFFFF),
+    surface = Color(0xFF190B38),
+    onSurface = Color(0xFFFFFFFF),
+    surfaceVariant = Color(0xFF261052),
+    onSurfaceVariant = Color(0xFFB8A6E3),
+    surfaceContainer = Color(0xFF190B38),
+    surfaceContainerHigh = Color(0xFF261052),
+    surfaceContainerHighest = Color(0xFF381675),
+    outline = Color(0xFF5A2EA6),
+    outlineVariant = Color(0xFF381675)
+)
+
 private val LightColorScheme = lightColorScheme(
     primary = Color(0xFF0061A4),
     onPrimary = Color(0xFFFFFFFF),
@@ -191,6 +212,7 @@ fun MyApplicationAnim1Theme(
             AppThemeMode.GREEN_BLACK -> GreenBlackColorScheme
             AppThemeMode.ORANGE_BLACK -> OrangeBlackColorScheme
             AppThemeMode.PINK_BLACK -> PinkBlackColorScheme
+            AppThemeMode.CYBERPUNK -> CyberpunkColorScheme
             AppThemeMode.DARK -> DarkGrayColorScheme
             else -> BlackNeonBlueColorScheme
         }

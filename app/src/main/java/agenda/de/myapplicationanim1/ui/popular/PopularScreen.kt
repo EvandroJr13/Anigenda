@@ -28,7 +28,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -47,6 +50,7 @@ import agenda.de.myapplicationanim1.ui.settings.AppThemeMode
 import agenda.de.myapplicationanim1.ui.theme.AgendaDeAnimesTheme
 import agenda.de.myapplicationanim1.ui.theme.ChewyFontFamily
 
+
 @Composable
 fun PopularScreen(
     modifier: Modifier = Modifier,
@@ -63,7 +67,6 @@ fun PopularScreen(
         modifier = modifier
     )
 }
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PopularContent(
@@ -77,25 +80,34 @@ fun PopularContent(
         topBar = {
             TopAppBar(
                 title = {
+                    val blackShadow = Shadow(color = Color.Black, offset = Offset(0f, 0f), blurRadius = 6f)
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = "Ani",
-                            fontFamily = ChewyFontFamily,
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            style = TextStyle(
+                                fontFamily = ChewyFontFamily,
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                shadow = blackShadow
+                            )
                         )
                         Text(
                             text = "genda",
-                            fontFamily = ChewyFontFamily,
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            style = TextStyle(
+                                fontFamily = ChewyFontFamily,
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                shadow = blackShadow
+                            )
                         )
                     }
                 },
+
+
                 actions = {
                     IconButton(onClick = onRefresh) {
                         Icon(
