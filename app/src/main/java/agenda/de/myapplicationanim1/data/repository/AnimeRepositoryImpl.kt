@@ -6,13 +6,17 @@ import agenda.de.myapplicationanim1.data.model.toDomain
 import agenda.de.myapplicationanim1.data.remote.AniListApiService
 import agenda.de.myapplicationanim1.data.remote.BangumiApiService
 import agenda.de.myapplicationanim1.data.remote.RetrofitClient
+import agenda.de.myapplicationanim1.data.util.AiAnimeGenerator
 import agenda.de.myapplicationanim1.data.util.Resource
 import com.squareup.moshi.JsonDataException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import java.io.IOException
+import java.time.LocalDate
 import java.util.Calendar
 
 class AnimeRepositoryImpl(
@@ -217,48 +221,120 @@ class AnimeRepositoryImpl(
     override fun searchAnime(query: String, genre: String?): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
         try {
+            val combinedList = coroutineScope {
+                val anilistDeferred = async(Dispatchers.IO) {
+                    try {
+                        val gqlQuery = """
+                            query (${'$'}search: String, ${'$'}genre: String, ${'$'}page: Int, ${'$'}perPage: Int) {
+                              Page(page: ${'$'}page, perPage: ${'$'}perPage) {
+                                media(search: ${'$'}search, genre: ${'$'}genre, type: ANIME, sort: [POPULARITY_DESC], isAdult: false) {
+                                  $MEDIA_FIELDS
+                                }
+                              }
+                            }
+                        """.trimIndent()
+
+                        val variables = mutableMapOf<String, Any>("page" to 1, "perPage" to 50)
+                        if (query.isNotBlank()) variables["search"] = query
+                        if (!genre.isNullOrBlank()) variables["genre"] = genre
+
+                        val body = mapOf("query" to gqlQuery, "variables" to variables)
+                        val response = apiService.graphqlQuery(body)
+                        if (response.isSuccessful) {
+                            response.body()?.data?.page?.media?.filter { it.isAdult != true }?.map { it.toDomain() } ?: emptyList()
+                        } else emptyList()
+                    } catch (_: Exception) { emptyList() }
+                }
+
+                val jikanDeferred = async(Dispatchers.IO) {
+                    try {
+                        val response = if (query.isBlank()) {
+                            RetrofitClient.jikanApiService.getUpcomingAnime()
+                        } else {
+                            RetrofitClient.jikanApiService.searchAnime(query)
+                        }
+                        if (response.isSuccessful) {
+                            response.body()?.data?.map { it.toDomain() } ?: emptyList()
+                        } else emptyList()
+                    } catch (_: Exception) { emptyList() }
+                }
+
+                val anilistResults = anilistDeferred.await()
+                val jikanResults = jikanDeferred.await()
+
+                // Merge and deduplicate by title
+                (anilistResults + jikanResults).distinctBy { it.title.lowercase().trim() }
+            }
+
+            emit(Resource.Success(combinedList))
+        } catch (e: Exception) {
+            Log.e("AnimeRepository", "Exception in searchAnime", e)
+            emit(Resource.Error(e.localizedMessage ?: "Ocorreu um erro inesperado", e))
+        }
+    }.flowOn(Dispatchers.IO)
+
+    private fun getNextSeasonUrl(): String {
+        val proximaData = LocalDate.now().plusMonths(3)
+        val ano = proximaData.year
+        val season = when (proximaData.monthValue) {
+            in 1..3 -> "winter"
+            in 4..6 -> "spring"
+            in 7..9 -> "summer"
+            else -> "fall"
+        }
+        return "https://api.jikan.moe/v4/seasons/$ano/$season"
+    }
+
+    override fun getUpcomingAnime(): Flow<Resource<List<Anime>>> = flow {
+        emit(Resource.Loading)
+        try {
+            // 1. Consulta AniList GraphQL com filtro explícito NOT_YET_AIRED
             val gqlQuery = """
-                query (${'$'}search: String, ${'$'}genre: String, ${'$'}page: Int, ${'$'}perPage: Int) {
+                query (${'$'}page: Int, ${'$'}perPage: Int) {
                   Page(page: ${'$'}page, perPage: ${'$'}perPage) {
-                    media(search: ${'$'}search, genre: ${'$'}genre, type: ANIME, sort: [POPULARITY_DESC], isAdult: false) {
+                    media(status: NOT_YET_AIRED, type: ANIME, sort: [POPULARITY_DESC], isAdult: false) {
                       $MEDIA_FIELDS
                     }
                   }
                 }
             """.trimIndent()
 
-            val variables = mutableMapOf<String, Any>(
-                "page" to 1,
-                "perPage" to 50
-            )
-            if (query.isNotBlank()) {
-                variables["search"] = query
-            }
-            if (!genre.isNullOrBlank()) {
-                variables["genre"] = genre
-            }
-
-            val body = mapOf("query" to gqlQuery, "variables" to variables)
+            val body = mapOf("query" to gqlQuery, "variables" to mapOf("page" to 1, "perPage" to 50))
             val response = apiService.graphqlQuery(body)
 
+            var list = emptyList<Anime>()
             if (response.isSuccessful) {
                 val mediaList = response.body()?.data?.page?.media ?: emptyList()
-                val animeList = mediaList.filter { it.isAdult != true }.map { it.toDomain() }
-                emit(Resource.Success(animeList))
-            } else {
-                val errorMsg = "Erro na API AniList: ${response.code()} ${response.message()}"
-                Log.e("AnimeRepository", "searchAnime error: $errorMsg")
-                emit(Resource.Error(errorMsg))
+                list = mediaList.filter { it.isAdult != true }.map { it.toDomain().copy(status = "UPCOMING", airingDay = "Futuro") }
             }
-        } catch (e: JsonDataException) {
-            Log.e("AnimeRepository", "JSON Exception in searchAnime", e)
-            emit(Resource.Error("Erro ao processar dados (JSON): ${e.localizedMessage}", e))
-        } catch (e: IOException) {
-            Log.e("AnimeRepository", "IOException in searchAnime", e)
-            emit(Resource.Error("Erro de conexão. Verifique sua internet.", e))
+
+            // 2. Se AniList retornar vazio, consulta Jikan API /seasons/upcoming
+            if (list.isEmpty()) {
+                val jikanRes = RetrofitClient.jikanApiService.getUpcomingAnime()
+                if (jikanRes.isSuccessful) {
+                    list = jikanRes.body()?.data?.map { it.toDomain().copy(status = "UPCOMING", airingDay = "Futuro") } ?: emptyList()
+                }
+            }
+
+            // 3. Fallback inteligente para o gerador por IA
+            if (list.isEmpty()) {
+                list = AiAnimeGenerator.generateUpcomingAnimePredictions()
+            }
+
+            emit(Resource.Success(list))
         } catch (e: Exception) {
-            Log.e("AnimeRepository", "Exception in searchAnime", e)
-            emit(Resource.Error(e.localizedMessage ?: "Ocorreu um erro inesperado", e))
+            safeLogW("AnimeRepository", "Exception in getUpcomingAnime", e)
+            try {
+                val jikanRes = RetrofitClient.jikanApiService.getUpcomingAnime()
+                if (jikanRes.isSuccessful) {
+                    val jikanList = jikanRes.body()?.data?.map { it.toDomain().copy(status = "UPCOMING", airingDay = "Futuro") } ?: emptyList()
+                    emit(Resource.Success(jikanList.ifEmpty { AiAnimeGenerator.generateUpcomingAnimePredictions() }))
+                } else {
+                    emit(Resource.Success(AiAnimeGenerator.generateUpcomingAnimePredictions()))
+                }
+            } catch (_: Exception) {
+                emit(Resource.Success(AiAnimeGenerator.generateUpcomingAnimePredictions()))
+            }
         }
     }.flowOn(Dispatchers.IO)
 

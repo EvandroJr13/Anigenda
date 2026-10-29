@@ -34,19 +34,49 @@ class SearchViewModel(
     )
 
     val availableStatuses = listOf(
-        "Airing", "Finished"
+        "Airing", "Finished", "Upcoming"
     )
 
     private var searchJob: Job? = null
     private var rawSearchResults: List<Anime> = emptyList()
+
+    init {
+        loadCalendarScheduleAsDefault()
+    }
+
+    private fun loadCalendarScheduleAsDefault() {
+        viewModelScope.launch {
+            _uiState.value = SearchUiState.Loading
+            repository.getSchedules(null).collect { resource ->
+                when (resource) {
+                    is Resource.Loading -> _uiState.value = SearchUiState.Loading
+                    is Resource.Error -> {
+                        repository.getPopularAnime().collect { popRes ->
+                            when (popRes) {
+                                is Resource.Loading -> _uiState.value = SearchUiState.Loading
+                                is Resource.Error -> _uiState.value = SearchUiState.Error(popRes.message)
+                                is Resource.Success -> {
+                                    rawSearchResults = popRes.data
+                                    _uiState.value = SearchUiState.Success(rawSearchResults)
+                                }
+                            }
+                        }
+                    }
+                    is Resource.Success -> {
+                        rawSearchResults = resource.data
+                        _uiState.value = SearchUiState.Success(rawSearchResults)
+                    }
+                }
+            }
+        }
+    }
 
     fun onQueryChanged(newQuery: String) {
         _query.value = newQuery
         searchJob?.cancel()
 
         if (newQuery.trim().isEmpty() && _selectedGenre.value == null && _selectedStatus.value == null) {
-            rawSearchResults = emptyList()
-            _uiState.value = SearchUiState.Idle
+            loadCalendarScheduleAsDefault()
             return
         }
 
@@ -64,8 +94,7 @@ class SearchViewModel(
     fun clearQuery() {
         _query.value = ""
         if (_selectedGenre.value == null && _selectedStatus.value == null) {
-            rawSearchResults = emptyList()
-            _uiState.value = SearchUiState.Idle
+            loadCalendarScheduleAsDefault()
         } else {
             executeSearch()
         }
@@ -78,44 +107,47 @@ class SearchViewModel(
 
     fun toggleStatus(status: String) {
         _selectedStatus.value = if (_selectedStatus.value == status) null else status
-        applyFiltersOrSearch()
+        executeSearch()
     }
 
     fun retry() {
         executeSearch()
     }
 
-    private fun applyFiltersOrSearch() {
-        if (_query.value.trim().isEmpty() && _selectedGenre.value == null && _selectedStatus.value == null) {
-            rawSearchResults = emptyList()
-            _uiState.value = SearchUiState.Idle
-        } else if (rawSearchResults.isNotEmpty()) {
-            val filtered = filterList(rawSearchResults)
-            _uiState.value = SearchUiState.Success(filtered)
-        } else {
-            executeSearch()
-        }
-    }
-
     private fun executeSearch() {
         val q = _query.value.trim()
         val genreFilter = _selectedGenre.value
+        val statusFilter = _selectedStatus.value
 
-        if (q.isEmpty() && genreFilter == null && _selectedStatus.value == null) {
-            _uiState.value = SearchUiState.Idle
+        if (q.isEmpty() && genreFilter == null && statusFilter == null) {
+            loadCalendarScheduleAsDefault()
             return
         }
 
         viewModelScope.launch {
             _uiState.value = SearchUiState.Loading
-            repository.searchAnime(query = q, genre = genreFilter).collect { resource ->
-                when (resource) {
-                    is Resource.Loading -> _uiState.value = SearchUiState.Loading
-                    is Resource.Error -> _uiState.value = SearchUiState.Error(resource.message)
-                    is Resource.Success -> {
-                        rawSearchResults = resource.data
-                        val filteredList = filterList(rawSearchResults)
-                        _uiState.value = SearchUiState.Success(filteredList)
+            if (statusFilter.equals("Upcoming", ignoreCase = true)) {
+                repository.getUpcomingAnime().collect { resource ->
+                    when (resource) {
+                        is Resource.Loading -> _uiState.value = SearchUiState.Loading
+                        is Resource.Error -> _uiState.value = SearchUiState.Error(resource.message)
+                        is Resource.Success -> {
+                            rawSearchResults = resource.data
+                            val filteredList = filterList(rawSearchResults)
+                            _uiState.value = SearchUiState.Success(filteredList)
+                        }
+                    }
+                }
+            } else {
+                repository.searchAnime(query = q, genre = genreFilter).collect { resource ->
+                    when (resource) {
+                        is Resource.Loading -> _uiState.value = SearchUiState.Loading
+                        is Resource.Error -> _uiState.value = SearchUiState.Error(resource.message)
+                        is Resource.Success -> {
+                            rawSearchResults = resource.data
+                            val filteredList = filterList(rawSearchResults)
+                            _uiState.value = SearchUiState.Success(filteredList)
+                        }
                     }
                 }
             }
@@ -132,6 +164,8 @@ class SearchViewModel(
                             !anime.status.contains("Finished", ignoreCase = true)
                 } else if (selectedStatusVal.equals("Finished", ignoreCase = true)) {
                     anime.status.contains("Finished", ignoreCase = true) || anime.status.contains("FINISHED", ignoreCase = true)
+                } else if (selectedStatusVal.equals("Upcoming", ignoreCase = true)) {
+                    true
                 } else {
                     anime.status.contains(selectedStatusVal, ignoreCase = true)
                 }
