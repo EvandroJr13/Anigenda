@@ -88,6 +88,72 @@ fun parseSeasonNumber(vararg titles: String): Int {
     return season
 }
 
+fun calculateFranchiseSeasons(vararg titles: String): Int {
+    var season = parseSeasonNumber(*titles)
+    for (t in titles) {
+        if (t.isBlank()) continue
+        val lower = t.lowercase()
+        when {
+            lower.contains("attack on titan") || lower.contains("shingeki no kyojin") -> season = maxOf(season, 4)
+            lower.contains("konosuba") || lower.contains("kono subarashii") -> season = maxOf(season, 4)
+            lower.contains("my hero academia") || lower.contains("boku no hero") -> season = maxOf(season, 7)
+            lower.contains("demon slayer") || lower.contains("kimetsu no yaiba") -> season = maxOf(season, 4)
+            lower.contains("shield hero") || lower.contains("tate no yuusha") -> season = maxOf(season, 3)
+            lower.contains("mushoku tensei") -> season = maxOf(season, 2)
+            lower.contains("tensei shitara slime") || lower.contains("reincarnated as a slime") -> season = maxOf(season, 3)
+            lower.contains("dr. stone") || lower.contains("dr stone") -> season = maxOf(season, 4)
+            lower.contains("re:zero") || lower.contains("rezero") -> season = maxOf(season, 3)
+            lower.contains("one-punch man") || lower.contains("one punch man") -> season = maxOf(season, 3)
+            lower.contains("shangri-la frontier") -> season = maxOf(season, 2)
+            lower.contains("spy x family") -> season = maxOf(season, 2)
+            lower.contains("classroom of the elite") || lower.contains("youkoso jitsuryoku") -> season = maxOf(season, 3)
+            lower.contains("danmachi") || lower.contains("dungeon ni deai") -> season = maxOf(season, 5)
+            lower.contains("overlord") -> season = maxOf(season, 4)
+            lower.contains("jujutsu kaisen") -> season = maxOf(season, 2)
+            lower.contains("sword art online") -> season = maxOf(season, 4)
+            lower.contains("mob psycho") -> season = maxOf(season, 3)
+            lower.contains("bleach") -> season = maxOf(season, 3)
+            lower.contains("vinland saga") -> season = maxOf(season, 2)
+            lower.contains("tokyo ghoul") -> season = maxOf(season, 4)
+            lower.contains("high school dxd") -> season = maxOf(season, 4)
+            lower.contains("fairy tail") -> season = maxOf(season, 9)
+            lower.contains("solo leveling") -> season = maxOf(season, 2)
+        }
+    }
+    return season
+}
+
+fun formatAiredDateForUpcoming(anime: Anime): String {
+    val airedStr = anime.aired.trim()
+    if (airedStr.matches(Regex("\\d{4}-\\d{2}(-\\d{2})?"))) {
+        val parts = airedStr.split("-")
+        val year = parts[0]
+        val monthNum = parts[1].toIntOrNull() ?: 1
+        val monthPt = when (monthNum) {
+            1 -> "Jan"
+            2 -> "Fev"
+            3 -> "Mar"
+            4 -> "Abr"
+            5 -> "Mai"
+            6 -> "Jun"
+            7 -> "Jul"
+            8 -> "Ago"
+            9 -> "Set"
+            10 -> "Out"
+            11 -> "Nov"
+            12 -> "Dez"
+            else -> ""
+        }
+        return if (monthPt.isNotEmpty()) "$monthPt $year" else year
+    } else if (airedStr.contains("2027") || airedStr.contains("2028") || airedStr.contains("2026") || airedStr.contains("2025")) {
+        val yearRegex = Regex("(20\\d{2})")
+        val match = yearRegex.find(airedStr)
+        val yr = match?.value ?: (anime.year?.toString() ?: "2027")
+        return yr
+    }
+    return anime.year?.toString() ?: "2027"
+}
+
 fun MediaDto.toDomain(): Anime {
     return try {
         val romaji = title?.romaji ?: ""
@@ -95,7 +161,7 @@ fun MediaDto.toDomain(): Anime {
         val native = title?.native ?: ""
         val bestTitle = english.ifEmpty { romaji.ifEmpty { native.ifEmpty { "Unknown Title" } } }
         val titleJapanese = native.ifEmpty { romaji }
-        val totalSeasons = parseSeasonNumber(bestTitle, romaji, english)
+        val totalSeasons = calculateFranchiseSeasons(bestTitle, romaji, english)
 
         val imageUrl = coverImage?.extraLarge ?: coverImage?.large ?: ""
         val desc = description ?: "No synopsis available."

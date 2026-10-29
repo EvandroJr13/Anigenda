@@ -58,3 +58,44 @@ data class GenericResourceDto(
     @field:Json(name = "type") val type: String? = null,
     @field:Json(name = "url") val url: String? = null,
 )
+
+fun AnimeDto.toDomain(): Anime {
+    val idVal = malId ?: title?.hashCode() ?: 0
+    val bestTitle = titleEnglish?.takeIf { it.isNotBlank() } ?: title ?: "Unknown Title"
+    val seasonsCount = calculateFranchiseSeasons(bestTitle, title ?: "", titleEnglish ?: "")
+    val largeImg = images?.jpg?.largeImageUrl
+        ?: images?.webp?.largeImageUrl
+        ?: images?.jpg?.imageUrl
+        ?: images?.webp?.imageUrl
+        ?: ""
+    val normalImg = images?.jpg?.imageUrl
+        ?: images?.webp?.imageUrl
+        ?: largeImg
+
+    return Anime(
+        id = idVal,
+        title = bestTitle,
+        titleRomaji = title ?: "",
+        titleEnglish = titleEnglish ?: "",
+        titleJapanese = titleJapanese ?: "",
+        imageUrl = normalImg,
+        largeImageUrl = largeImg,
+        synopsis = synopsis ?: "",
+        score = score ?: 0.0,
+        episodes = episodes ?: 0,
+        status = status ?: "RELEASING",
+        aired = aired?.string ?: "",
+        broadcast = BroadcastInfo(
+            day = broadcast?.day ?: "",
+            time = broadcast?.time ?: "",
+            timezone = broadcast?.timezone ?: "JST",
+            stringFormat = broadcast?.string ?: ""
+        ),
+        genres = genres?.mapNotNull { it.name } ?: emptyList(),
+        studios = studios?.mapNotNull { it.name } ?: emptyList(),
+        season = season ?: "",
+        year = year,
+        rating = rating ?: "",
+        totalSeasons = seasonsCount
+    )
+}

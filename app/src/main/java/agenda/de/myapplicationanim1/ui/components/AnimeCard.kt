@@ -7,6 +7,7 @@ import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.net.Uri
+import agenda.de.myapplicationanim1.data.model.formatAiredDateForUpcoming
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -275,9 +276,10 @@ fun AnimeCard(
                 // Episode / Season Badge (Bottom-Left)
                 val epNum = anime.nextAiringEpisode?.episode ?: if (anime.episodes > 0) anime.episodes else 1
                 val totalSeasonsText = "${anime.totalSeasons} Temporada${if (anime.totalSeasons > 1) "s" else ""}"
+                val upcomingDateText = formatAiredDateForUpcoming(anime)
                 val defaultBadgeText = when {
                     anime.status.equals("UPCOMING", ignoreCase = true) || anime.status.equals("Not Yet Aired", ignoreCase = true) -> {
-                        "Próxima: Temp. ${anime.totalSeasons}"
+                        "Próxima: Temp. ${anime.totalSeasons} • $upcomingDateText"
                     }
                     anime.status.equals("Finished", ignoreCase = true) || anime.status.equals("FINISHED", ignoreCase = true) -> {
                         totalSeasonsText

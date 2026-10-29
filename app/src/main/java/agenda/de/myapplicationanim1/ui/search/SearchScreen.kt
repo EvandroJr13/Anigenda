@@ -48,6 +48,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import agenda.de.myapplicationanim1.data.model.formatAiredDateForUpcoming
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -246,7 +247,7 @@ fun SearchContent(
                             val displayName = when (status) {
                                 "Airing" -> "Em Exibição"
                                 "Finished" -> "Concluídos"
-                                "Upcoming" -> "Previsões / Futuros"
+                                "Upcoming" -> "Em breve"
                                 else -> status
                             }
                             FilterChip(
@@ -494,8 +495,9 @@ fun SearchContent(
                             ) {
                                 items(animeList, key = { it.id }) { anime ->
                                     val ep = anime.nextAiringEpisode?.episode ?: if (anime.episodes > 0) anime.episodes else 1
+                                    val dateText = formatAiredDateForUpcoming(anime)
                                     val seasonBadgeText = when (selectedStatus) {
-                                        "Upcoming" -> "Próxima: Temp. ${anime.totalSeasons}"
+                                        "Upcoming" -> "Próxima: Temp. ${anime.totalSeasons} • $dateText"
                                         "Finished" -> "${anime.totalSeasons} Temporada${if (anime.totalSeasons > 1) "s" else ""}"
                                         else -> "Ep $ep, Temporadas ${anime.totalSeasons}"
                                     }

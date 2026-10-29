@@ -15,8 +15,8 @@ android {
         applicationId = "agenda.de.anigenda"
         minSdk = 29
         targetSdk = 35
-        versionCode = 146
-        versionName = "1.4.6"
+        versionCode = 147
+        versionName = "1.4.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

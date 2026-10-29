@@ -70,7 +70,8 @@ fun BangumiItemDto.toDomain(): Anime {
         airingDay = dayOfWeekPt,
         nextAiringEpisode = null,
         trailerId = null,
-        trailerSite = null
+        trailerSite = null,
+        totalSeasons = calculateFranchiseSeasons(titleStr)
     )
 }
 
