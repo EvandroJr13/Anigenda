@@ -288,11 +288,11 @@ class AnimeRepositoryImpl(
     override fun getUpcomingAnime(): Flow<Resource<List<Anime>>> = flow {
         emit(Resource.Loading)
         try {
-            // 1. Consulta AniList GraphQL com filtro explícito NOT_YET_AIRED
+            // 1. Consulta AniList GraphQL com filtro para animes com lançamento a partir de 2027/01 (startDate_greater: 20261231)
             val gqlQuery = """
                 query (${'$'}page: Int, ${'$'}perPage: Int) {
                   Page(page: ${'$'}page, perPage: ${'$'}perPage) {
-                    media(status: NOT_YET_AIRED, type: ANIME, sort: [POPULARITY_DESC], isAdult: false) {
+                    media(startDate_greater: 20261231, type: ANIME, sort: [START_DATE, POPULARITY_DESC], isAdult: false) {
                       $MEDIA_FIELDS
                     }
                   }
@@ -305,35 +305,36 @@ class AnimeRepositoryImpl(
             var list = emptyList<Anime>()
             if (response.isSuccessful) {
                 val mediaList = response.body()?.data?.page?.media ?: emptyList()
-                list = mediaList.filter { it.isAdult != true }.map { it.toDomain().copy(status = "UPCOMING", airingDay = "Futuro") }
+                list = mediaList.filter { it.isAdult != true }.map { it.toDomain().copy(status = "UPCOMING", airingDay = "2027+") }
             }
 
-            // 2. Se AniList retornar vazio, consulta Jikan API /seasons/upcoming
+            // 2. Se AniList não retornar suficiente, consulta Jikan API MyAnimeList para Winter 2027 (Janeiro de 2027)
             if (list.isEmpty()) {
-                val jikanRes = RetrofitClient.jikanApiService.getUpcomingAnime()
+                val jikanRes = RetrofitClient.jikanApiService.getSeasonalAnime(2027, "winter")
                 if (jikanRes.isSuccessful) {
-                    list = jikanRes.body()?.data?.map { it.toDomain().copy(status = "UPCOMING", airingDay = "Futuro") } ?: emptyList()
+                    list = jikanRes.body()?.data?.map { it.toDomain().copy(status = "UPCOMING", airingDay = "2027+") } ?: emptyList()
                 }
             }
 
-            // 3. Fallback inteligente para o gerador por IA
-            if (list.isEmpty()) {
-                list = AiAnimeGenerator.generateUpcomingAnimePredictions()
+            // 3. Garante rigorosamente que apenas animes a partir de 2027/01 sejam incluídos
+            val filtered2027List = list.filter { anime ->
+                val yr = anime.year ?: 0
+                yr >= 2027 || anime.aired.contains("2027") || anime.aired.contains("2028")
             }
 
-            emit(Resource.Success(list))
+            emit(Resource.Success(filtered2027List))
         } catch (e: Exception) {
-            safeLogW("AnimeRepository", "Exception in getUpcomingAnime", e)
+            safeLogW("AnimeRepository", "Exception in getUpcomingAnime for 2027/01+", e)
             try {
-                val jikanRes = RetrofitClient.jikanApiService.getUpcomingAnime()
+                val jikanRes = RetrofitClient.jikanApiService.getSeasonalAnime(2027, "winter")
                 if (jikanRes.isSuccessful) {
-                    val jikanList = jikanRes.body()?.data?.map { it.toDomain().copy(status = "UPCOMING", airingDay = "Futuro") } ?: emptyList()
-                    emit(Resource.Success(jikanList.ifEmpty { AiAnimeGenerator.generateUpcomingAnimePredictions() }))
+                    val jikanList = jikanRes.body()?.data?.map { it.toDomain().copy(status = "UPCOMING", airingDay = "2027+") } ?: emptyList()
+                    emit(Resource.Success(jikanList))
                 } else {
-                    emit(Resource.Success(AiAnimeGenerator.generateUpcomingAnimePredictions()))
+                    emit(Resource.Success(emptyList()))
                 }
             } catch (_: Exception) {
-                emit(Resource.Success(AiAnimeGenerator.generateUpcomingAnimePredictions()))
+                emit(Resource.Success(emptyList()))
             }
         }
     }.flowOn(Dispatchers.IO)
