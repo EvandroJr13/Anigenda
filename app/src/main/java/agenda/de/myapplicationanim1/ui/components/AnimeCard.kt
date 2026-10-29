@@ -274,7 +274,16 @@ fun AnimeCard(
 
                 // Episode / Season Badge (Bottom-Left)
                 val epNum = anime.nextAiringEpisode?.episode ?: if (anime.episodes > 0) anime.episodes else 1
-                val defaultBadgeText = "Ep $epNum, Temporadas ${anime.totalSeasons}"
+                val totalSeasonsText = "${anime.totalSeasons} Temporada${if (anime.totalSeasons > 1) "s" else ""}"
+                val defaultBadgeText = when {
+                    anime.status.equals("UPCOMING", ignoreCase = true) || anime.status.equals("Not Yet Aired", ignoreCase = true) -> {
+                        "Próxima: Temp. ${anime.totalSeasons}"
+                    }
+                    anime.status.equals("Finished", ignoreCase = true) || anime.status.equals("FINISHED", ignoreCase = true) -> {
+                        totalSeasonsText
+                    }
+                    else -> "Ep $epNum, Temporadas ${anime.totalSeasons}"
+                }
                 val finalBadgeText = episodeBadgeText ?: defaultBadgeText
 
                 Surface(
